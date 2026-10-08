@@ -27,6 +27,10 @@ public enum Perk {
     LIGHT_TRAVEL("light_travel", Category.MAIN, 3, "Путешествие налегке"),
     ALCOHOLIC("alcoholic", Category.MAIN, 2, "Закалённый алкоголик"),
     SMOKER("smoker", Category.MAIN, 1, "Курильщик"),
+    // Питание (действуют, если стоит RP Culinary: черты RP Core)
+    CLEAN("clean", Category.MAIN, 2, "Чистюля"),
+    GOURMET("gourmet", Category.MAIN, 2, "Гурман"),
+    FAST_METABOLISM("fast_metabolism", Category.MAIN, 1, "Быстрый обмен веществ"),
 
     // === Умения ===
     SOLDIER("soldier", Category.SKILL, 12, "Подготовленный солдат"),
@@ -41,6 +45,8 @@ public enum Perk {
     TAILOR("tailor", Category.SKILL, 4, "Кройка"),
     FARMER("farmer", Category.SKILL, 4, "Фермер"),
     COOK("cook", Category.SKILL, 4, "Кулинар"),
+    DIETITIAN("dietitian", Category.SKILL, 3, "Диетолог"),
+    FIELD_COOK("field_cook", Category.SKILL, 3, "Полевой повар"),
     DRIVER("driver", Category.SKILL, 4, "Водятел"),
     PILOT("pilot", Category.SKILL, 4, "Пинпиныч"),
     FIRST_AID("first_aid", Category.SKILL, 3, "Курсы первой медицинской помощи"),
@@ -64,6 +70,8 @@ public enum Perk {
     LANDLUBBER("landlubber", Category.NEGATIVE, 3, "Сухопутный"),
     TEETOTALER("teetotaler", Category.NEGATIVE, 2, "Непьющий"),
     PACIFIST("pacifist", Category.NEGATIVE, 5, "Пацифист"),
+    KITCHEN_NIGHTMARE("kitchen_nightmare", Category.NEGATIVE, 3, "Кухонный кошмар"),
+    SLOW_METABOLISM("slow_metabolism", Category.NEGATIVE, 2, "Склонность к полноте"),
 
     // === Служебные ===
     ADMIN("admin", Category.SERVICE, 0, "Админ");

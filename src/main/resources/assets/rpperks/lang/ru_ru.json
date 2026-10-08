@@ -186,5 +186,19 @@
   "skill.rpperks.fitness": "Форма",
   "skill.rpperks.fitness.desc": "Растёт от бега, плавания, лестниц. Выносливость. 0–2 — Задохлик, 7–8 — Выносливый, 9–10 — Атлет.",
   "message.rpperks.skill_up": "Навык «%s» вырос до %s",
-  "message.rpperks.skill_down": "Навык «%s» упал до %s (нет нагрузки)"
+  "message.rpperks.skill_down": "Навык «%s» упал до %s (нет нагрузки)",
+  "perk.rpperks.clean.name": "§aЧистюля",
+  "perk.rpperks.clean.desc": "Почти не травится сырым мясом и рыбой (RP Culinary).",
+  "perk.rpperks.gourmet.name": "§aГурман",
+  "perk.rpperks.gourmet.desc": "Однообразная еда надоедает быстрее, зато хорошие блюда радуют сильнее и дольше не приедаются (RP Culinary).",
+  "perk.rpperks.fast_metabolism.name": "§aБыстрый обмен веществ",
+  "perk.rpperks.fast_metabolism.desc": "Тратит на 15 % больше калорий: ест чаще, но легко держит вес (RP Culinary).",
+  "perk.rpperks.dietitian.name": "§aДиетолог",
+  "perk.rpperks.dietitian.desc": "Видит точный состав еды и подсказки «что съесть», в окне «Питание» — цифры (RP Culinary).",
+  "perk.rpperks.field_cook.name": "§aПолевой повар",
+  "perk.rpperks.field_cook.desc": "На костре и в коптильне готовит как на 2 уровня Кулинарии выше (RP Culinary).",
+  "perk.rpperks.kitchen_nightmare.name": "§cКухонный кошмар",
+  "perk.rpperks.kitchen_nightmare.desc": "Готовит на 3 уровня Кулинарии хуже: чаще подгорает (RP Culinary).",
+  "perk.rpperks.slow_metabolism.name": "§cСклонность к полноте",
+  "perk.rpperks.slow_metabolism.desc": "Тратит на 15 % меньше калорий: легко набирает вес (RP Culinary)."
 }

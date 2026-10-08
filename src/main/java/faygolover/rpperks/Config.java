@@ -243,6 +243,9 @@ public final class Config {
 
         rpPerk(Perk.ALCOHOLIC, "Легко переносит алкоголь (РП)");
         rpPerk(Perk.SMOKER, "Курение улучшает психическое состояние, без него — ухудшается (РП)");
+        rpPerk(Perk.CLEAN, "Чистюля: почти не травится сырым мясом (нужен RP Culinary; числа — в его конфиге)");
+        rpPerk(Perk.GOURMET, "Гурман: однообразная еда надоедает быстрее, хорошая и вкусная радует сильнее (нужен RP Culinary)");
+        rpPerk(Perk.FAST_METABOLISM, "Быстрый обмен веществ: тратит на 15 % больше, легко держит вес (нужен RP Culinary)");
         B.pop();
 
         // =====================================================================
@@ -274,7 +277,9 @@ public final class Config {
 
         rpPerk(Perk.TAILOR, "Шитьё и ремонт одежды (РП)");
         rpPerk(Perk.FARMER, "Фермерство, сбор и различение диких растений (РП)");
-        rpPerk(Perk.COOK, "Сложные блюда и разделка туш (РП)");
+        rpPerk(Perk.COOK, "Кулинария 5: хорошие блюда, сложные рецепты (уровень — skill_system.perk_skills; с RP Culinary — качество блюд)");
+        rpPerk(Perk.DIETITIAN, "Диетолог: точный состав еды и советы «что съесть» (нужен RP Culinary)");
+        rpPerk(Perk.FIELD_COOK, "Полевой повар: на костре и в коптильне готовит как на 2 уровня Кулинарии выше (нужен RP Culinary)");
         rpPerk(Perk.DRIVER, "Минимальное управление наземным транспортом (РП)");
         rpPerk(Perk.PILOT, "Минимальное управление воздушным транспортом (РП)");
         beginPerk(Perk.FIRST_AID, "Медицина 3: полная первая помощь, базовое обращение с медицинскими вещами");
@@ -431,6 +436,8 @@ public final class Config {
         B.pop();
 
         rpPerk(Perk.TEETOTALER, "Не переносит алкоголь (РП)");
+        rpPerk(Perk.KITCHEN_NIGHTMARE, "Кухонный кошмар: готовит на 3 уровня Кулинарии хуже, чаще подгорает (нужен RP Culinary)");
+        rpPerk(Perk.SLOW_METABOLISM, "Склонность к полноте: тратит на 15 % меньше, легко набирает вес (нужен RP Culinary)");
         B.pop();
 
         // =====================================================================
@@ -474,7 +481,9 @@ public final class Config {
                         "agile = clumsy",
                         "technophobe = technician, hacker, pilot",
                         "soldier = gunner",
-                        "medic = first_aid"
+                        "medic = first_aid",
+                        "kitchen_nightmare = cook, dietitian, field_cook",
+                        "fast_metabolism = slow_metabolism, anorexic"
                 ), Config::isString);
         B.pop();
 

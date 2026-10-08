@@ -34,6 +34,15 @@ public final class CoreTraits implements TraitProvider {
             RpIds.TEETOTALER, Set.of(Perk.TEETOTALER),
             RpIds.CAFFEINE_ADDICT, Set.of(Perk.CAFFEINE_ADDICTION),
             RpIds.ANOREXIC, Set.of(Perk.ANOREXIC));
+    /** Питание (RP Culinary). Map.of берёт не больше 10 пар — вторая таблица. */
+    private static final Map<ResourceLocation, Set<Perk>> FOOD_TRAITS = Map.of(
+            RpIds.DIETITIAN, Set.of(Perk.DIETITIAN),
+            RpIds.FIELD_COOK, Set.of(Perk.FIELD_COOK),
+            RpIds.CLEAN, Set.of(Perk.CLEAN),
+            RpIds.GOURMET, Set.of(Perk.GOURMET),
+            RpIds.KITCHEN_NIGHTMARE, Set.of(Perk.KITCHEN_NIGHTMARE),
+            RpIds.FAST_METABOLISM, Set.of(Perk.FAST_METABOLISM),
+            RpIds.SLOW_METABOLISM, Set.of(Perk.SLOW_METABOLISM));
 
     private static PlayerPerks data(Player p) {
         return p.getCapability(PlayerPerksProvider.PLAYER_PERKS).resolve().orElse(null);
@@ -66,7 +75,7 @@ public final class CoreTraits implements TraitProvider {
 
     @Override
     public boolean hasTrait(Player player, ResourceLocation trait) {
-        Set<Perk> perks = TRAITS.get(trait);
+        Set<Perk> perks = TRAITS.containsKey(trait) ? TRAITS.get(trait) : FOOD_TRAITS.get(trait);
         if (perks == null) return false;
         PlayerPerks d = data(player);
         if (d == null) return false;

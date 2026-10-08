@@ -186,5 +186,19 @@
   "skill.rpperks.fitness": "Fitness",
   "skill.rpperks.fitness.desc": "Grows from running, swimming, climbing. 0–2 — Weakling, 7–8 — Enduring, 9–10 — Athlete.",
   "message.rpperks.skill_up": "Skill \"%s\" rose to %s",
-  "message.rpperks.skill_down": "Skill \"%s\" dropped to %s (no exercise)"
+  "message.rpperks.skill_down": "Skill \"%s\" dropped to %s (no exercise)",
+  "perk.rpperks.clean.name": "§aClean Freak",
+  "perk.rpperks.clean.desc": "Rarely gets food poisoning from raw meat and fish (RP Culinary).",
+  "perk.rpperks.gourmet.name": "§aGourmet",
+  "perk.rpperks.gourmet.desc": "Monotonous food gets boring faster, but good dishes please more and stay tasty longer (RP Culinary).",
+  "perk.rpperks.fast_metabolism.name": "§aFast Metabolism",
+  "perk.rpperks.fast_metabolism.desc": "Burns 15% more calories: eats more often but keeps weight easily (RP Culinary).",
+  "perk.rpperks.dietitian.name": "§aDietitian",
+  "perk.rpperks.dietitian.desc": "Sees exact food composition and what-to-eat hints, numbers in the Nutrition window (RP Culinary).",
+  "perk.rpperks.field_cook.name": "§aField Cook",
+  "perk.rpperks.field_cook.desc": "Cooks on a campfire or in a smoker as if 2 Cooking levels higher (RP Culinary).",
+  "perk.rpperks.kitchen_nightmare.name": "§cKitchen Nightmare",
+  "perk.rpperks.kitchen_nightmare.desc": "Cooks 3 Cooking levels worse: burns food more often (RP Culinary).",
+  "perk.rpperks.slow_metabolism.name": "§cProne to Weight Gain",
+  "perk.rpperks.slow_metabolism.desc": "Burns 15% fewer calories: gains weight easily (RP Culinary)."
 }
