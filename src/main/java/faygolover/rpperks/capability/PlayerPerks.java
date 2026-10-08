@@ -29,6 +29,11 @@ public class PlayerPerks {
     private int anorexiaTimer = 0;
     private boolean refuseNextMeal = false;
     private int unluckyCooldown = 0;
+    /**
+     * Уровни навыков (0–10), выставленные ГМом: id навыка RP Core -> уровень. Нет записи — уровень по перкам
+     * (см. {@link faygolover.rpperks.compat.CoreTraits}). Навыки семейства RP ведёт RP Perks (решение автора 07.10).
+     */
+    private final Map<String, Integer> skillLevels = new java.util.HashMap<>();
 
     /**
      * Кэш последнего пересчёта характеристик (см. PerkEventHandler.computeStats).
@@ -136,6 +141,16 @@ public class PlayerPerks {
     public boolean isSelectionLocked() { return selectionLocked; }
     public void setSelectionLocked(boolean locked) { this.selectionLocked = locked; }
 
+    // ---------- Навыки (RP Core) ----------
+    /** Уровень, выставленный ГМом, или -1. */
+    public int getSkillLevel(String skill) { return skillLevels.getOrDefault(skill, -1); }
+    /** {@code level < 0} — убрать (вернуть уровень по перкам). */
+    public void setSkillLevel(String skill, int level) {
+        if (level < 0) skillLevels.remove(skill);
+        else skillLevels.put(skill, Math.min(10, level));
+    }
+    public Map<String, Integer> getSkillLevels() { return Collections.unmodifiableMap(skillLevels); }
+
     // ---------- Таймеры механик ----------
     public int getCaffeineTimer() { return caffeineTimer; }
     public void setCaffeineTimer(int ticks) { this.caffeineTimer = ticks; }
@@ -156,7 +171,8 @@ public class PlayerPerks {
 
     // ---------- Синхронизация на клиент ----------
     public void applyClientSync(int points, Map<Perk, Integer> perkDeltas, int refuseTokens, int resetTokens,
-                                Collection<Perk> blocked, boolean selectionLocked, int caffeineTimer, int anorexiaTimer, boolean refuseNextMeal) {
+                                Collection<Perk> blocked, boolean selectionLocked, int caffeineTimer, int anorexiaTimer, boolean refuseNextMeal,
+                                Map<String, Integer> skills) {
         this.points = points;
         this.perks.clear();
         this.perks.putAll(perkDeltas);
@@ -168,6 +184,8 @@ public class PlayerPerks {
         this.caffeineTimer = caffeineTimer;
         this.anorexiaTimer = anorexiaTimer;
         this.refuseNextMeal = refuseNextMeal;
+        this.skillLevels.clear();
+        this.skillLevels.putAll(skills);
     }
 
     // ---------- Копирование при смерти / возвращении из Энда ----------
@@ -184,6 +202,8 @@ public class PlayerPerks {
         this.anorexiaTimer = source.anorexiaTimer;
         this.refuseNextMeal = source.refuseNextMeal;
         this.unluckyCooldown = source.unluckyCooldown;
+        this.skillLevels.clear();
+        this.skillLevels.putAll(source.skillLevels);
     }
 
     // ---------- NBT ----------
@@ -208,6 +228,9 @@ public class PlayerPerks {
             list.add(entry);
         });
         nbt.put("perk_entries", list);
+        CompoundTag skills = new CompoundTag();
+        skillLevels.forEach(skills::putInt);
+        nbt.put("skills", skills);
     }
 
     public void loadNBT(CompoundTag nbt) {
@@ -222,6 +245,9 @@ public class PlayerPerks {
         this.anorexiaTimer = nbt.getInt("anorexiaTimer");
         this.refuseNextMeal = nbt.getBoolean("refuseNextMeal");
         this.unluckyCooldown = nbt.getInt("unluckyCooldown");
+        this.skillLevels.clear();
+        CompoundTag skills = nbt.getCompound("skills");
+        for (String k : skills.getAllKeys()) skillLevels.put(k, skills.getInt(k));
         this.perks.clear();
 
         if (nbt.contains("perk_entries", Tag.TAG_LIST)) {

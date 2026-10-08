@@ -11,7 +11,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 public final class NetworkHandler {
     private NetworkHandler() {}
 
-    private static final String PROTOCOL_VERSION = "4";
+    private static final String PROTOCOL_VERSION = "5";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(Rpperks.MODID, "main"),
             () -> PROTOCOL_VERSION,

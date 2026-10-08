@@ -29,10 +29,12 @@ public class SyncPerksPacket {
     public final int caffeineTimer;
     public final int anorexiaTimer;
     public final boolean refuseNextMeal;
+    /** Уровни навыков, выставленные ГМом (RP Core). */
+    public final Map<String, Integer> skills;
 
     public SyncPerksPacket(int points, Map<Perk, Integer> perks, int refuseTokens, int resetTokens,
                            List<Perk> blocked, boolean selectionLocked,
-                           int caffeineTimer, int anorexiaTimer, boolean refuseNextMeal) {
+                           int caffeineTimer, int anorexiaTimer, boolean refuseNextMeal, Map<String, Integer> skills) {
         this.points = points;
         this.perks = perks;
         this.refuseTokens = refuseTokens;
@@ -42,6 +44,7 @@ public class SyncPerksPacket {
         this.caffeineTimer = caffeineTimer;
         this.anorexiaTimer = anorexiaTimer;
         this.refuseNextMeal = refuseNextMeal;
+        this.skills = skills;
     }
 
     public static SyncPerksPacket of(PlayerPerks data) {
@@ -49,13 +52,13 @@ public class SyncPerksPacket {
         perks.putAll(data.getPerkDeltas());
         return new SyncPerksPacket(data.getPoints(), perks, data.getRefuseTokens(), data.getResetTokens(),
                 new ArrayList<>(data.getBlockedPerks()), data.isSelectionLocked(),
-                data.getCaffeineTimer(), data.getAnorexiaTimer(), data.isRefuseNextMeal());
+                data.getCaffeineTimer(), data.getAnorexiaTimer(), data.isRefuseNextMeal(), new java.util.HashMap<>(data.getSkillLevels()));
     }
 
     /** Записывает снимок в объект данных (клиентская capability или снимок для админского окна). */
     public void applyTo(PlayerPerks data) {
         data.applyClientSync(points, perks, refuseTokens, resetTokens, blocked, selectionLocked,
-                caffeineTimer, anorexiaTimer, refuseNextMeal);
+                caffeineTimer, anorexiaTimer, refuseNextMeal, skills);
     }
 
     public static void encode(SyncPerksPacket msg, FriendlyByteBuf buf) {
@@ -68,6 +71,7 @@ public class SyncPerksPacket {
         buf.writeVarInt(msg.caffeineTimer);
         buf.writeVarInt(msg.anorexiaTimer);
         buf.writeBoolean(msg.refuseNextMeal);
+        buf.writeMap(msg.skills, FriendlyByteBuf::writeUtf, FriendlyByteBuf::writeVarInt);
     }
 
     public static SyncPerksPacket decode(FriendlyByteBuf buf) {
@@ -80,7 +84,8 @@ public class SyncPerksPacket {
         int caffeine = buf.readVarInt();
         int anorexia = buf.readVarInt();
         boolean refuse = buf.readBoolean();
-        return new SyncPerksPacket(points, perks, refuseTokens, resetTokens, blocked, locked, caffeine, anorexia, refuse);
+        Map<String, Integer> skills = buf.readMap(FriendlyByteBuf::readUtf, FriendlyByteBuf::readVarInt);
+        return new SyncPerksPacket(points, perks, refuseTokens, resetTokens, blocked, locked, caffeine, anorexia, refuse, skills);
     }
 
     public static void handle(SyncPerksPacket msg, Supplier<NetworkEvent.Context> ctx) {

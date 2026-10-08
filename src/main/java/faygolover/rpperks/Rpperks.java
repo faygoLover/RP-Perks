@@ -32,6 +32,11 @@ public class Rpperks {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(NetworkHandler::register);
+        // RP Core: Perks ведёт навыки семейства и отвечает на вопросы о чертах (Диабетик, Курильщик…).
+        event.enqueueWork(() -> {
+            faygolover.rpcore.api.RpCoreAPI.registerProvider(new faygolover.rpperks.compat.CoreTraits());
+            faygolover.rpcore.api.RpCoreAPI.registerModule(MODID, "перки, навыки (Медицина, Кулинария) и черты");
+        });
         LOGGER.info("RP Perks loaded.");
     }
 }
