@@ -159,9 +159,13 @@ public final class PerkEventHandler {
     }
 
     private static void applyStats(ServerPlayer player, Map<Stat, Double> values) {
+        // С модом тела (RP Medicine) ванильное здоровье скрыто и всегда полное: «Живучий» и «Хрупкий» работают
+        // через черты тела, а максимум здоровья остаётся ванильным.
+        boolean bodyHealth = faygolover.rpcore.api.RpCoreAPI.bodyHandles(faygolover.rpcore.api.RpIds.BODY_HEALTH);
         values.forEach((stat, value) -> {
             switch (stat.getKind()) {
-                case ATTRIBUTE -> setBase(player, stat.getAttribute(), value);
+                case ATTRIBUTE -> setBase(player, stat.getAttribute(),
+                        bodyHealth && stat == Stat.MAX_HEALTH ? vanillaBase(stat.getAttribute()) : value);
                 case COMMAND -> runStatCommand(player, stat, (int) Math.round(value));
                 case CUSTOM -> { /* обрабатывается в событиях */ }
             }

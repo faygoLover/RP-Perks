@@ -101,6 +101,15 @@ public final class PerkMechanicsHandler {
         // без перка их никогда и не было, а снимаются они через clearDynamicModifiers при потере перка —
         // тикать здесь для остальных 29 игроков на сервере незачем.
         if (!data.hasPerk(Perk.CAFFEINE_ADDICTION)) return;
+        // С модом тела ломку ведёт он (вялость, сонливость, головная боль по времени без кофеина) — свой таймер стоит.
+        if (faygolover.rpcore.api.RpCoreAPI.bodyHandles(faygolover.rpcore.api.RpIds.BODY_CAFFEINE)) {
+            if (data.getCaffeineTimer() != 0) data.setCaffeineTimer(0);
+            PerkEventHandler.setModifier(player, Attributes.MOVEMENT_SPEED, PerkEventHandler.CAFFEINE_SPEED_UUID, "RP caffeine crash (speed)", 0,
+                    AttributeModifier.Operation.MULTIPLY_BASE, false);
+            PerkEventHandler.setModifier(player, Attributes.ATTACK_SPEED, PerkEventHandler.CAFFEINE_ATTACK_UUID, "RP caffeine crash (attack)", 0,
+                    AttributeModifier.Operation.MULTIPLY_BASE, false);
+            return;
+        }
 
         int threshold = Config.caffeineWithdrawalTicks();
         // Клампим таймер порогом: после срабатывания ломки дальше расти ему незачем (UI показывает
@@ -139,7 +148,11 @@ public final class PerkMechanicsHandler {
     private static void tickNerdRage(ServerPlayer player, PlayerPerks data) {
         if (!data.hasPerk(Perk.NERD_RAGE)) return;
         float threshold = (float) (Config.get(Config.NERD_RAGE_HEALTH_PERCENT) / 100.0);
-        if (player.getHealth() / player.getMaxHealth() > threshold) return;
+        // С модом тела — от общего состояния (ванильное здоровье там всегда полное и порог бы не наступал).
+        var body = faygolover.rpcore.api.RpCoreAPI.body();
+        float condition = body != null && body.handles(faygolover.rpcore.api.RpIds.BODY_HEALTH)
+                ? body.condition(player) : player.getHealth() / player.getMaxHealth();
+        if (condition > threshold) return;
         int amplifier = Config.get(Config.NERD_RAGE_EFFECT_LEVEL) - 1;
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 40, amplifier, true, false, true));
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 40, amplifier, true, false, true));
@@ -315,7 +328,10 @@ public final class PerkMechanicsHandler {
         if (event.getDistance() < Config.get(Config.UNLUCKY_FALL_MIN_HEIGHT)) return;
         player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
             if (!canMishap(player, data, Config.get(Config.UNLUCKY_FALL_CHANCE_PERCENT))) return;
-            player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
+            // С модом тела — настоящий вывих голеностопа (вправляет медик); без него — замедление.
+            var body = faygolover.rpcore.api.RpCoreAPI.body();
+            boolean real = body != null && body.handles(faygolover.rpcore.api.RpIds.BODY_SPRAIN) && body.sprain(player);
+            if (!real) player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
                     Config.get(Config.UNLUCKY_SPRAIN_SECONDS) * 20, 0, false, false, true));
             player.displayClientMessage(Component.translatable("message.rpperks.unlucky.sprain"), true);
             startMishapCooldown(data);
