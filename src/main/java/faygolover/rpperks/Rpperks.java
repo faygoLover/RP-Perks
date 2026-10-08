@@ -35,7 +35,9 @@ public class Rpperks {
         // RP Core: Perks ведёт навыки семейства и отвечает на вопросы о чертах (Диабетик, Курильщик…).
         event.enqueueWork(() -> {
             faygolover.rpcore.api.RpCoreAPI.registerProvider(new faygolover.rpperks.compat.CoreTraits());
-            faygolover.rpcore.api.RpCoreAPI.registerModule(MODID, "перки, навыки (Медицина, Кулинария) и черты");
+            faygolover.rpcore.api.RpCoreAPI.registerModule(MODID, "перки, навыки (оружие, ближний бой, Медицина, Сила, Форма…) и черты");
+            // Оружейные навыки — только если стоит TaCZ (класс с его API грузится лишь тогда).
+            if (net.minecraftforge.fml.ModList.get().isLoaded("tacz")) faygolover.rpperks.compat.tacz.WeaponSkills.register();
         });
         LOGGER.info("RP Perks loaded.");
     }

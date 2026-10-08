@@ -11,7 +11,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 public final class NetworkHandler {
     private NetworkHandler() {}
 
-    private static final String PROTOCOL_VERSION = "5";
+    private static final String PROTOCOL_VERSION = "6";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(Rpperks.MODID, "main"),
             () -> PROTOCOL_VERSION,
@@ -30,6 +30,11 @@ public final class NetworkHandler {
                 .encoder(OpenPerkScreenPacket::encode)
                 .decoder(OpenPerkScreenPacket::decode)
                 .consumerMainThread(OpenPerkScreenPacket::handle)
+                .add();
+        CHANNEL.messageBuilder(SyncSkillsPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(SyncSkillsPacket::encode)
+                .decoder(SyncSkillsPacket::decode)
+                .consumerMainThread(SyncSkillsPacket::handle)
                 .add();
         CHANNEL.messageBuilder(PerkActionPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(PerkActionPacket::encode)

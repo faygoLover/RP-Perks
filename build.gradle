@@ -123,6 +123,12 @@ repositories {
     // }
     // RP Core (обязательная зависимость семейства RP) — jar в libs/.
     flatDir { dir 'libs' }
+    // TaCZ — только для компиляции оружейных навыков (в игре необязателен).
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
 }
 
 dependencies {
@@ -135,6 +141,8 @@ dependencies {
 
     // RP Core — общая библиотека семейства: навыки, черты, HUD.
     implementation fg.deobf("blank:rpcore:${rpcore_version}")
+    // TaCZ: оружейные навыки (тип ствола, события выстрела и попадания). Необязателен: класс грузится, только если TaCZ стоит.
+    compileOnly fg.deobf("maven.modrinth:timeless-and-classics-zero:1.1.8-hotfix")
 
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

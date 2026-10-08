@@ -67,6 +67,30 @@ public final class Config {
 
     public static final ForgeConfigSpec.IntValue ADMIN_INVENTORY_SLOTS;
 
+    // ---------- [skill_system] ----------
+    public static final ForgeConfigSpec.BooleanValue SKILL_GROWTH;
+    public static final ForgeConfigSpec.DoubleValue XP_MULTIPLIER;
+    public static final ForgeConfigSpec.DoubleValue XP_BASE;
+    public static final ForgeConfigSpec.DoubleValue XP_GROWTH;
+    public static final ForgeConfigSpec.DoubleValue XP_GUN_SHOT;
+    public static final ForgeConfigSpec.DoubleValue XP_GUN_HIT;
+    public static final ForgeConfigSpec.DoubleValue XP_EXPLOSIVE_SHOT;
+    public static final ForgeConfigSpec.DoubleValue XP_MELEE_HIT;
+    public static final ForgeConfigSpec.DoubleValue XP_PER_100_STAMINA;
+    public static final ForgeConfigSpec.DoubleValue XP_MEDICINE;
+    public static final ForgeConfigSpec.IntValue PHYSICAL_START;
+    public static final ForgeConfigSpec.DoubleValue PHYSICAL_DECAY_PER_MINUTE;
+    public static final ForgeConfigSpec.IntValue PHYSICAL_IDLE_MINUTES;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> PERK_SKILLS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends Double>> T_SPREAD, T_RECOIL, T_RELOAD, T_AIM, T_MELEE_DAMAGE, T_MELEE_SPEED, T_EXPLOSIVE;
+    public static final ForgeConfigSpec.DoubleValue STRENGTH_MELEE_PER_LEVEL;
+    public static final ForgeConfigSpec.DoubleValue STRENGTH_HEAVY_RECOIL_PER_LEVEL;
+    public static final ForgeConfigSpec.IntValue CLUMSY_WEAPON_PENALTY;
+    public static final ForgeConfigSpec.IntValue PACIFIST_COMBAT_CAP;
+    public static final ForgeConfigSpec.DoubleValue PACIFIST_HUMAN_DAMAGE;
+    public static final ForgeConfigSpec.DoubleValue PACIFIST_COMBAT_XP;
+    public static final ForgeConfigSpec.DoubleValue PACIFIST_PEACE_XP;
+
     // ---------- [conflicts] ----------
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> CONFLICTS;
 
@@ -76,6 +100,7 @@ public final class Config {
     private static volatile Set<ResourceLocation> caffeineItems = Set.of();
     private static volatile Set<Perk> hiddenPerks = EnumSet.of(Perk.ADMIN);
     private static volatile Map<Perk, Set<Perk>> conflicts = Map.of();
+    private static volatile Map<Perk, Map<faygolover.rpperks.skill.SkillDef, Integer>> perkSkills = Map.of();
 
     static {
         // =====================================================================
@@ -222,12 +247,12 @@ public final class Config {
 
         // =====================================================================
         B.comment(" УМЕНИЯ").push("skills");
-        rpPerk(Perk.SOLDIER, "Пистолеты, ПП, автоматы, снайперские винтовки, ограниченно спец. вооружение (РП)");
-        rpPerk(Perk.MEDIC, "Сложные медицинские манипуляции, полное обращение с препаратами и оборудованием (РП)");
+        beginPerk(Perk.SOLDIER, "Подготовленный солдат: оружие на уровне хорошего бойца, базовая первая помощь (уровни — skill_system.perk_skills)");
+        B.pop();
+        beginPerk(Perk.MEDIC, "Медицина 8: сложные манипуляции, препараты и оборудование (RP Medicine)");
+        B.pop();
 
-        beginPerk(Perk.MELEE_FIGHTER, "Умение сражаться в ближнем бою: повышенный урон и скорость ударов, меньше устаёт в бою");
-        bonus(Perk.MELEE_FIGHTER, Stat.ATTACK_DAMAGE, 0.2);
-        bonus(Perk.MELEE_FIGHTER, Stat.ATTACK_SPEED, 1.0);
+        beginPerk(Perk.MELEE_FIGHTER, "Ближний бой 5 (любое оружие ближнего боя и голые руки), меньше устаёт в бою");
         bonus(Perk.MELEE_FIGHTER, Stat.STAMINA_MELEE_COST, -0.2);
         B.pop();
 
@@ -235,8 +260,10 @@ public final class Config {
         bonus(Perk.BUILDER, Stat.STAMINA_MINE_COST, -0.2);
         B.pop();
 
-        rpPerk(Perk.GUNNER, "Пистолеты, ограниченно пистолеты-пулемёты (РП)");
-        rpPerk(Perk.EXPLOSIVES, "Создание, обезвреживание и применение взрывных устройств (РП)");
+        beginPerk(Perk.GUNNER, "Короткоствольное оружие 4, длинноствольное 1");
+        B.pop();
+        beginPerk(Perk.EXPLOSIVES, "Взрывчатка 5, тяжёлое оружие 1; создание и обезвреживание взрывных устройств (РП)");
+        B.pop();
         rpPerk(Perk.TECHNICIAN, "Работа со сложным оборудованием и техникой, ограниченный ремонт (РП)");
         rpPerk(Perk.HACKER, "Взлом замков, электронных систем, дверей и терминалов (РП)");
 
@@ -250,7 +277,59 @@ public final class Config {
         rpPerk(Perk.COOK, "Сложные блюда и разделка туш (РП)");
         rpPerk(Perk.DRIVER, "Минимальное управление наземным транспортом (РП)");
         rpPerk(Perk.PILOT, "Минимальное управление воздушным транспортом (РП)");
-        rpPerk(Perk.FIRST_AID, "Полная первая помощь, базовое обращение с медицинскими вещами (РП)");
+        beginPerk(Perk.FIRST_AID, "Медицина 3: полная первая помощь, базовое обращение с медицинскими вещами");
+        B.pop();
+        beginPerk(Perk.BASIC_TRAINING, "Курс молодого бойца: короткоствольное и длинноствольное 2, ближний бой 1, медицина 1");
+        B.pop();
+        B.pop();
+
+        // =====================================================================
+        B.comment(" НАВЫКИ: уровни 0–10, рост от практики, влияние на оружие и ближний бой").push("skill_system");
+        SKILL_GROWTH = B.comment(" Навыки растут от практики (оружие, ближний бой, медицина, нагрузка). false — только перки и ГМ.")
+                .define("growth_enabled", true);
+        XP_MULTIPLIER = B.comment(" Общий множитель опыта (2.0 — вдвое быстрее)").defineInRange("xp_multiplier", 1.0, 0.0, 100.0);
+        XP_BASE = B.comment(" Опыт на уровень 0 -> 1").defineInRange("xp_base", 150.0, 1.0, 1.0e7);
+        XP_GROWTH = B.comment(" Каждый следующий уровень дороже во столько раз").defineInRange("xp_growth", 1.6, 1.0, 10.0);
+        XP_GUN_SHOT = B.comment(" Опыт оружейного навыка за выстрел").defineInRange("xp_gun_shot", 0.15, 0.0, 1000.0);
+        XP_GUN_HIT = B.comment(" Опыт оружейного навыка за попадание по живой цели").defineInRange("xp_gun_hit", 1.0, 0.0, 1000.0);
+        XP_EXPLOSIVE_SHOT = B.comment(" Опыт «Взрывчатки» за выстрел из гранатомёта").defineInRange("xp_explosive_shot", 1.0, 0.0, 1000.0);
+        XP_MELEE_HIT = B.comment(" Опыт ближнего боя за удар по живой цели").defineInRange("xp_melee_hit", 1.0, 0.0, 1000.0);
+        XP_PER_100_STAMINA = B.comment(" Опыт Силы/Формы за каждые 100 потраченной выносливости (нужен RP Stamina)")
+                .defineInRange("xp_per_100_stamina", 1.0, 0.0, 1000.0);
+        XP_MEDICINE = B.comment(" Множитель опыта Медицины (сколько даёт лечение — решает RP Medicine)").defineInRange("xp_medicine", 1.0, 0.0, 100.0);
+        PHYSICAL_START = B.comment(" Сила и Форма у игрока без физических перков").defineInRange("physical_start_level", 4, 0, 10);
+        PHYSICAL_DECAY_PER_MINUTE = B.comment(" Сила и Форма без нагрузки: потеря опыта за минуту в сети").defineInRange("physical_decay_per_minute", 1.0, 0.0, 1000.0);
+        PHYSICAL_IDLE_MINUTES = B.comment(" Без нагрузки столько минут в сети — начинается потеря").defineInRange("physical_idle_minutes", 30, 0, 100000);
+        PERK_SKILLS = B.comment(" Уровни навыков от перков: \"перк = навык:уровень, ...\". Перк даёт МИНИМУМ уровня; от нескольких перков берётся наибольший.",
+                        " Навыки: medicine, cooking, short_arms, long_arms, heavy_arms, explosives, melee.",
+                        " Сила и Форма от перков не задаются: Силач/Слабак, Атлет/Выносливый/Задохлик — динамические (зависят от уровня).")
+                .defineListAllowEmpty(List.of("perk_skills"), List.of(
+                        "first_aid = medicine:3",
+                        "medic = medicine:8",
+                        "cook = cooking:5",
+                        "basic_training = short_arms:2, long_arms:2, melee:1, medicine:1",
+                        "gunner = short_arms:4, long_arms:1",
+                        "explosives = explosives:5, heavy_arms:1",
+                        "melee_fighter = melee:5",
+                        "soldier = short_arms:5, long_arms:5, heavy_arms:3, explosives:2, melee:3, medicine:2"
+                ), Config::isString);
+        T_SPREAD = table("weapon_spread", " Разброс оружия по уровню 0..10 (5 = как в TaCZ)", 3.0, 2.2, 1.6, 1.35, 1.15, 1.0, 0.9, 0.8, 0.7, 0.62, 0.55);
+        T_RECOIL = table("weapon_recoil", " Отдача по уровню 0..10", 2.5, 1.9, 1.45, 1.25, 1.1, 1.0, 0.92, 0.84, 0.76, 0.68, 0.6);
+        T_RELOAD = table("weapon_reload", " Время перезарядки по уровню 0..10", 2.0, 1.6, 1.3, 1.18, 1.08, 1.0, 0.94, 0.87, 0.8, 0.72, 0.65);
+        T_AIM = table("weapon_aim", " Время прицеливания по уровню 0..10", 2.0, 1.6, 1.3, 1.18, 1.08, 1.0, 0.94, 0.87, 0.8, 0.72, 0.65);
+        T_MELEE_DAMAGE = table("melee_damage", " Урон в ближнем бою (любое оружие и кулаки) по уровню 0..10", 0.7, 0.76, 0.82, 0.88, 0.94, 1.0, 1.08, 1.16, 1.24, 1.32, 1.4);
+        T_MELEE_SPEED = table("melee_speed", " Скорость ударов по уровню 0..10", 0.8, 0.84, 0.88, 0.92, 0.96, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25);
+        T_EXPLOSIVE = table("explosive_power", " Сила и радиус взрывов своего оружия по уровню «Взрывчатки» 0..10", 0.6, 0.68, 0.76, 0.84, 0.92, 1.0, 1.06, 1.12, 1.18, 1.24, 1.3);
+        STRENGTH_MELEE_PER_LEVEL = B.comment(" Сила: прибавка к урону в ближнем бою за уровень выше 4 (и убавка ниже)")
+                .defineInRange("strength_melee_per_level", 0.03, 0.0, 1.0);
+        STRENGTH_HEAVY_RECOIL_PER_LEVEL = B.comment(" Сила: насколько меньше отдача тяжёлого оружия за уровень выше 4")
+                .defineInRange("strength_heavy_recoil_per_level", 0.03, 0.0, 1.0);
+        CLUMSY_WEAPON_PENALTY = B.comment(" Плохая координация: минус к уровням огнестрельных навыков").defineInRange("clumsy_weapon_penalty", 1, 0, 10);
+        PACIFIST_COMBAT_CAP = B.comment(" Пацифист: боевые навыки не выше").defineInRange("pacifist_combat_cap", 1, 0, 10);
+        PACIFIST_HUMAN_DAMAGE = B.comment(" Пацифист: множитель урона по людям (игроки и сущности из тега rpperks:humans)")
+                .defineInRange("pacifist_human_damage", 0.25, 0.0, 1.0);
+        PACIFIST_COMBAT_XP = B.comment(" Пацифист: множитель опыта боевых навыков").defineInRange("pacifist_combat_xp", 0.1, 0.0, 10.0);
+        PACIFIST_PEACE_XP = B.comment(" Пацифист: множитель опыта мирных навыков (медицина, кулинария)").defineInRange("pacifist_peace_xp", 1.25, 0.0, 10.0);
         B.pop();
 
         // =====================================================================
@@ -335,6 +414,9 @@ public final class Config {
 
         rpPerk(Perk.COWARD, "Быстро поддаётся панике (РП)");
 
+        beginPerk(Perk.PACIFIST, "Не воюет с людьми: урон по людям сильно снижен, боевые навыки не выше 1 и почти не растут; мирные навыки учит быстрее");
+        B.pop();
+
         beginPerk(Perk.CLUMSY, "Иногда роняет предмет из рук при использовании");
         CLUMSY_DROP_CHANCE_PERCENT = B.comment(" Шанс выронить предмет при использовании (ПКМ)")
                 .defineInRange("drop_chance_percent", 5.0, 0.0, 100.0);
@@ -385,6 +467,8 @@ public final class Config {
                         "brave = coward",
                         "strong_willed = suggestible",
                         "alcoholic = teetotaler",
+                        "pacifist = soldier, gunner, explosives, melee_fighter, basic_training, nerd_rage",
+                        "soldier = gunner, basic_training",
                         "sailor = landlubber",
                         "lucky = unlucky",
                         "agile = clumsy",
@@ -419,6 +503,25 @@ public final class Config {
                 ? " Цена в баллах (списывается при выдаче)"
                 : " Сколько баллов получает игрок, взявший этот перк";
         COSTS.put(perk, B.comment(costHint).defineInRange("cost", perk.getDefaultCost(), 0, 1000));
+    }
+
+    private static ForgeConfigSpec.ConfigValue<List<? extends Double>> table(String key, String comment, double... values) {
+        List<Double> def = new ArrayList<>();
+        for (double v : values) def.add(v);
+        return B.comment(comment).defineList(key, def, o -> o instanceof Number);
+    }
+
+    /** Значение таблицы по уровню 0..10 (не хватает чисел — 1.0). */
+    @SuppressWarnings("unchecked")
+    public static double table(ForgeConfigSpec.ConfigValue<List<? extends Double>> t, int level) {
+        List<? extends Number> l = (List<? extends Number>) (List<?>) t.get();
+        int i = Math.max(0, Math.min(10, level));
+        return i < l.size() ? l.get(i).doubleValue() : 1.0;
+    }
+
+    /** Минимальные уровни навыков, которые даёт перк. */
+    public static Map<faygolover.rpperks.skill.SkillDef, Integer> getPerkSkills(Perk perk) {
+        return perkSkills.getOrDefault(perk, Map.of());
     }
 
     private static void bonus(Perk perk, Stat stat, double defaultValue) {
@@ -554,5 +657,30 @@ public final class Config {
             }
         }
         conflicts = map;
+
+        // Уровни навыков от перков
+        Map<Perk, Map<faygolover.rpperks.skill.SkillDef, Integer>> ps = new EnumMap<>(Perk.class);
+        for (String line : PERK_SKILLS.get()) {
+            String[] parts = line.split("=", 2);
+            Optional<Perk> perk = parts.length == 2 ? Perk.fromId(parts[0].trim()) : Optional.empty();
+            if (perk.isEmpty()) {
+                Rpperks.LOGGER.error("[RP Perks] Неверная строка в perk_skills: {}", line);
+                continue;
+            }
+            Map<faygolover.rpperks.skill.SkillDef, Integer> m = new EnumMap<>(faygolover.rpperks.skill.SkillDef.class);
+            for (String raw : parts[1].split(",")) {
+                String[] kv = raw.trim().split(":");
+                if (kv.length != 2) continue;
+                var skill = faygolover.rpperks.skill.SkillDef.byKey(kv[0].trim());
+                try {
+                    if (skill.isPresent()) m.put(skill.get(), Math.max(0, Math.min(10, Integer.parseInt(kv[1].trim()))));
+                    else Rpperks.LOGGER.error("[RP Perks] Неизвестный навык в perk_skills: {}", kv[0]);
+                } catch (NumberFormatException ex) {
+                    Rpperks.LOGGER.error("[RP Perks] Неверный уровень в perk_skills: {}", raw);
+                }
+            }
+            ps.put(perk.get(), m);
+        }
+        perkSkills = ps;
     }
 }

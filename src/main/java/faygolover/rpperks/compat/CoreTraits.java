@@ -17,11 +17,10 @@ import java.util.Set;
  * RP Perks для RP Core: навыки семейства (Медицина, Кулинария) и черты по перкам. Другие моды спрашивают
  * Core и не знают о классах Perks — поэтому каждый мод запускается и без Perks.
  * <p>
- * Уровень навыка: выставленный ГМом ({@code /rpcore skill}), иначе по перкам — «Курсы первой помощи» 3,
- * «Анастасия» 8 (как было в RP Medicine), «Кулинар» 5.
+ * Уровни навыков — {@link faygolover.rpperks.skill.SkillService}: ГМ, наработанный, не ниже уровня от перков
+ * (таблица {@code skill_system.perk_skills} в конфиге).
  */
 public final class CoreTraits implements TraitProvider {
-    private static final Set<ResourceLocation> SKILLS = Set.of(RpIds.MEDICINE, RpIds.COOKING);
 
     /** Черта RP Core → перки, которые её дают. */
     private static final Map<ResourceLocation, Set<Perk>> TRAITS = Map.of(
@@ -41,31 +40,27 @@ public final class CoreTraits implements TraitProvider {
 
     @Override
     public boolean managesSkill(ResourceLocation skill) {
-        return SKILLS.contains(skill);
+        return faygolover.rpperks.skill.SkillDef.byId(skill).isPresent();
     }
 
     @Override
     public int skill(Player player, ResourceLocation skill) {
-        PlayerPerks d = data(player);
-        if (d == null) return 0;
-        int set = d.getSkillLevel(skill.toString());
-        if (set >= 0) return set;
-        if (skill.equals(RpIds.MEDICINE)) {
-            if (d.hasPerk(Perk.MEDIC)) return 8;
-            if (d.hasPerk(Perk.FIRST_AID)) return 3;
-        } else if (skill.equals(RpIds.COOKING)) {
-            if (d.hasPerk(Perk.COOK)) return 5;
-        }
-        return 0;
+        return faygolover.rpperks.skill.SkillDef.byId(skill).map(s -> faygolover.rpperks.skill.SkillService.level(player, s)).orElse(0);
     }
 
     @Override
     public boolean setSkill(Player player, ResourceLocation skill, int level) {
         PlayerPerks d = data(player);
-        if (d == null) return false;
+        if (d == null || faygolover.rpperks.skill.SkillDef.byId(skill).isEmpty()) return false;
         d.setSkillLevel(skill.toString(), level);
-        if (player instanceof ServerPlayer sp) PerkEventHandler.syncToClient(sp, d);
+        if (player instanceof ServerPlayer sp) PerkEventHandler.refreshPlayer(sp, d);
         return true;
+    }
+
+    @Override
+    public void practice(Player player, ResourceLocation skill, double amount) {
+        if (player instanceof ServerPlayer sp)
+            faygolover.rpperks.skill.SkillDef.byId(skill).ifPresent(s -> faygolover.rpperks.skill.SkillService.practice(sp, s, amount));
     }
 
     @Override

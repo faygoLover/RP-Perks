@@ -34,6 +34,16 @@ public class PlayerPerks {
      * (см. {@link faygolover.rpperks.compat.CoreTraits}). Навыки семейства RP ведёт RP Perks (решение автора 07.10).
      */
     private final Map<String, Integer> skillLevels = new java.util.HashMap<>();
+    /** Наработанный уровень навыка (от практики; не ниже уровня от перков, когда до него дошёл рост). */
+    private final Map<String, Integer> trained = new java.util.HashMap<>();
+    /** Опыт к следующему уровню. */
+    private final Map<String, Double> skillXp = new java.util.HashMap<>();
+    /** Физические перки, стартовый уровень которых уже применён (Силач → Сила 7 и т. п.). */
+    private final Set<String> physiqueApplied = new java.util.HashSet<>();
+    /** Минут в сети без физической нагрузки (для потери Силы и Формы). */
+    private int idleMinutes;
+    /** Клиент: итоговые уровни, опыт (доля) и источник по навыкам — из пакета навыков. */
+    private Map<String, float[]> clientSkills = Map.of();
 
     /**
      * Кэш последнего пересчёта характеристик (см. PerkEventHandler.computeStats).
@@ -151,6 +161,31 @@ public class PlayerPerks {
     }
     public Map<String, Integer> getSkillLevels() { return Collections.unmodifiableMap(skillLevels); }
 
+    /** Наработанный уровень или -1. */
+    public int getTrained(String skill) { return trained.getOrDefault(skill, -1); }
+    public void setTrained(String skill, int level) { trained.put(skill, Math.max(0, Math.min(10, level))); }
+    public double getSkillXp(String skill) { return skillXp.getOrDefault(skill, 0.0); }
+    public void setSkillXp(String skill, double xp) { skillXp.put(skill, Math.max(0, xp)); }
+    public boolean isPhysiqueApplied(Perk perk) { return physiqueApplied.contains(perk.getId()); }
+    public void setPhysiqueApplied(Perk perk, boolean applied) {
+        if (applied) physiqueApplied.add(perk.getId());
+        else physiqueApplied.remove(perk.getId());
+    }
+    public int getIdleMinutes() { return idleMinutes; }
+    public void setIdleMinutes(int minutes) { idleMinutes = minutes; }
+    public Map<String, float[]> getClientSkills() { return clientSkills; }
+    public void setClientSkills(Map<String, float[]> skills) { clientSkills = Map.copyOf(skills); }
+
+    /**
+     * Динамический перк (Сила, Форма): появляется и пропадает сам, баллы не трогает (решение 08.10:
+     * Слабак может накачаться до Силача без возврата или списания очков).
+     */
+    public void setDynamicPerk(Perk perk, boolean has) {
+        if (has) perks.putIfAbsent(perk, 0);
+        else perks.remove(perk);
+        cachedStats = null;
+    }
+
     // ---------- Таймеры механик ----------
     public int getCaffeineTimer() { return caffeineTimer; }
     public void setCaffeineTimer(int ticks) { this.caffeineTimer = ticks; }
@@ -204,6 +239,13 @@ public class PlayerPerks {
         this.unluckyCooldown = source.unluckyCooldown;
         this.skillLevels.clear();
         this.skillLevels.putAll(source.skillLevels);
+        this.trained.clear();
+        this.trained.putAll(source.trained);
+        this.skillXp.clear();
+        this.skillXp.putAll(source.skillXp);
+        this.physiqueApplied.clear();
+        this.physiqueApplied.addAll(source.physiqueApplied);
+        this.idleMinutes = source.idleMinutes;
     }
 
     // ---------- NBT ----------
@@ -231,6 +273,16 @@ public class PlayerPerks {
         CompoundTag skills = new CompoundTag();
         skillLevels.forEach(skills::putInt);
         nbt.put("skills", skills);
+        CompoundTag tr = new CompoundTag();
+        trained.forEach(tr::putInt);
+        nbt.put("skillsTrained", tr);
+        CompoundTag xp = new CompoundTag();
+        skillXp.forEach(xp::putDouble);
+        nbt.put("skillsXp", xp);
+        ListTag applied = new ListTag();
+        for (String id : physiqueApplied) applied.add(StringTag.valueOf(id));
+        nbt.put("physiqueApplied", applied);
+        nbt.putInt("idleMinutes", idleMinutes);
     }
 
     public void loadNBT(CompoundTag nbt) {
@@ -248,6 +300,16 @@ public class PlayerPerks {
         this.skillLevels.clear();
         CompoundTag skills = nbt.getCompound("skills");
         for (String k : skills.getAllKeys()) skillLevels.put(k, skills.getInt(k));
+        this.trained.clear();
+        CompoundTag tr = nbt.getCompound("skillsTrained");
+        for (String k : tr.getAllKeys()) trained.put(k, tr.getInt(k));
+        this.skillXp.clear();
+        CompoundTag xp = nbt.getCompound("skillsXp");
+        for (String k : xp.getAllKeys()) skillXp.put(k, xp.getDouble(k));
+        this.physiqueApplied.clear();
+        ListTag applied = nbt.getList("physiqueApplied", Tag.TAG_STRING);
+        for (int i = 0; i < applied.size(); i++) physiqueApplied.add(applied.getString(i));
+        this.idleMinutes = nbt.getInt("idleMinutes");
         this.perks.clear();
 
         if (nbt.contains("perk_entries", Tag.TAG_LIST)) {

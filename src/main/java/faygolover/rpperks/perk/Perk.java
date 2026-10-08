@@ -29,7 +29,7 @@ public enum Perk {
     SMOKER("smoker", Category.MAIN, 1, "Курильщик"),
 
     // === Умения ===
-    SOLDIER("soldier", Category.SKILL, 9, "Подготовленный солдат"),
+    SOLDIER("soldier", Category.SKILL, 12, "Подготовленный солдат"),
     MEDIC("medic", Category.SKILL, 7, "Анастасия"),
     MELEE_FIGHTER("melee_fighter", Category.SKILL, 7, "Боец ближнего боя"),
     BUILDER("builder", Category.SKILL, 6, "Рогалёв"),
@@ -44,6 +44,7 @@ public enum Perk {
     DRIVER("driver", Category.SKILL, 4, "Водятел"),
     PILOT("pilot", Category.SKILL, 4, "Пинпиныч"),
     FIRST_AID("first_aid", Category.SKILL, 3, "Курсы первой медицинской помощи"),
+    BASIC_TRAINING("basic_training", Category.SKILL, 4, "Курс молодого бойца"),
 
     // === Негативные ===
     FRAGILE("fragile", Category.NEGATIVE, 8, "Хрупкий"),
@@ -62,6 +63,7 @@ public enum Perk {
     TECHNOPHOBE("technophobe", Category.NEGATIVE, 4, "Технофоб"),
     LANDLUBBER("landlubber", Category.NEGATIVE, 3, "Сухопутный"),
     TEETOTALER("teetotaler", Category.NEGATIVE, 2, "Непьющий"),
+    PACIFIST("pacifist", Category.NEGATIVE, 5, "Пацифист"),
 
     // === Служебные ===
     ADMIN("admin", Category.SERVICE, 0, "Админ");

@@ -105,6 +105,8 @@ public final class PerkEventHandler {
         boolean wasFullHealth = oldHealth >= player.getMaxHealth();
 
         clearDynamicModifiers(player);
+        // Навыки: купленный физический перк задаёт стартовую Силу/Форму, дальше перки следуют за уровнем.
+        faygolover.rpperks.skill.SkillService.syncPhysique(data);
 
         if (data.isAdmin()) {
             // В режиме Админа обычные статы не действуют — кэш неактуален и не нужен,
@@ -124,6 +126,7 @@ public final class PerkEventHandler {
         player.setHealth(wasFullHealth ? player.getMaxHealth() : Math.min(oldHealth, player.getMaxHealth()));
 
         syncToClient(player, data);
+        faygolover.rpperks.skill.SkillService.sync(player);
     }
 
     /** Итоговые значения всех характеристик игрока без учёта режима Админа. */

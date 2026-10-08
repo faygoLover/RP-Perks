@@ -60,7 +60,9 @@ public class PerkScreen extends Screen {
         MAIN("main", Perk.Category.MAIN),
         SKILL("skill", Perk.Category.SKILL),
         NEGATIVE("negative", Perk.Category.NEGATIVE),
-        SERVICE("service", Perk.Category.SERVICE);
+        SERVICE("service", Perk.Category.SERVICE),
+        /** Навыки 0–10: уровень, опыт, откуда уровень (свои данные игрока). */
+        SKILLS("skills", null);
 
         final String key;
         @Nullable final Perk.Category category;
@@ -80,6 +82,8 @@ public class PerkScreen extends Screen {
 
     private Tab tab = Tab.MINE;
     @Nullable private Perk selected;
+    @Nullable private faygolover.rpperks.skill.SkillDef selectedSkill;
+    private static final int SKILL_ROW = 24;
     private double scroll;
 
     private int left, top, panelHeight;
@@ -122,11 +126,13 @@ public class PerkScreen extends Screen {
 
     private List<Tab> visibleTabs() {
         List<Tab> tabs = new ArrayList<>(List.of(Tab.MINE, Tab.MAIN, Tab.SKILL, Tab.NEGATIVE));
+        if (!adminMode) tabs.add(Tab.SKILLS);
         if (canSeeHidden) tabs.add(Tab.SERVICE);
         return tabs;
     }
 
     private List<Perk> rows(PlayerPerks data) {
+        if (tab == Tab.SKILLS) return List.of();
         if (tab == Tab.MINE) {
             return data.getActivePerks().stream().filter(p -> PerkRules.isVisible(p, canSeeHidden)).toList();
         }
@@ -243,8 +249,9 @@ public class PerkScreen extends Screen {
                     ? "gui.rpperks.button.selection_closed" : "gui.rpperks.button.selection_open"));
         }
 
-        if (data == null || selected == null) {
+        if (data == null || selected == null || tab == Tab.SKILLS) {
             actionButton.visible = false;
+            if (blockButton != null && tab == Tab.SKILLS) blockButton.visible = false;
         } else {
             actionButton.visible = true;
             boolean owned = data.owns(selected);
@@ -347,6 +354,14 @@ public class PerkScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
+        if (button == 0 && inList(mx, my) && tab == Tab.SKILLS) {
+            int index = (int) Math.floor((my - listY - 2 + scroll) / SKILL_ROW);
+            if (index >= 0 && index < faygolover.rpperks.skill.SkillDef.VALUES.length) {
+                selectedSkill = faygolover.rpperks.skill.SkillDef.VALUES[index];
+                return true;
+            }
+            return false;
+        }
         if (button == 0 && inList(mx, my)) {
             PlayerPerks data = data();
             if (data == null) return false;
@@ -415,6 +430,10 @@ public class PerkScreen extends Screen {
     }
 
     private void renderList(GuiGraphics g, PlayerPerks data, int mouseX, int mouseY) {
+        if (tab == Tab.SKILLS) {
+            renderSkills(g, data, mouseX, mouseY);
+            return;
+        }
         List<Perk> rows = rows(data);
         int contentH = rows.size() * ROW + 4;
         int maxScroll = Math.max(0, contentH - listH);
@@ -463,10 +482,80 @@ public class PerkScreen extends Screen {
         return perk.isPositive() ? "§a-" + perk.getCost() : "§c+" + perk.getCost();
     }
 
+    /** Вкладка «Навыки»: название, уровень, полоска опыта до следующего уровня. */
+    private void renderSkills(GuiGraphics g, PlayerPerks data, int mouseX, int mouseY) {
+        var skills = faygolover.rpperks.skill.SkillDef.VALUES;
+        int contentH = skills.length * SKILL_ROW + 4;
+        int maxScroll = Math.max(0, contentH - listH);
+        scroll = Mth.clamp(scroll, 0, maxScroll);
+        g.enableScissor(listX, listY, listX + LIST_W, listY + listH);
+        int y = listY + 2 - (int) scroll;
+        for (var s : skills) {
+            float[] v = data.getClientSkills().get(s.key());
+            int lvl = v != null ? (int) v[0] : 0;
+            float frac = v != null ? v[1] : 0f;
+            boolean hover = inList(mouseX, mouseY) && mouseY >= y && mouseY < y + SKILL_ROW;
+            if (s == selectedSkill) g.fill(listX + 1, y, listX + LIST_W - 1, y + SKILL_ROW, C_SELECTED);
+            else if (hover) g.fill(listX + 1, y, listX + LIST_W - 1, y + SKILL_ROW, C_HOVER);
+            g.drawString(font, Component.translatable(s.nameKey()), listX + 4, y + 3, C_TEXT, false);
+            String l = String.valueOf(lvl);
+            g.drawString(font, l, listX + LIST_W - 8 - font.width(l), y + 3, lvl >= 7 ? C_GOOD : lvl <= 1 ? C_BAD : C_TITLE, false);
+            int bx = listX + 4, bw = LIST_W - 12, by = y + 15;
+            g.fill(bx, by, bx + bw, by + 4, 0xFF2A2E36);
+            for (int i = 1; i < 10; i++) g.fill(bx + bw * i / 10, by, bx + bw * i / 10 + 1, by + 4, 0xFF1B1E24);
+            int filled = (int) (bw * Math.min(10, lvl + (lvl >= 10 ? 0 : frac)) / 10f);
+            g.fill(bx, by, bx + filled, by + 4, 0xFFD4A537);
+            y += SKILL_ROW;
+        }
+        g.disableScissor();
+    }
+
+    private void renderSkillInfo(GuiGraphics g, PlayerPerks data, int x, int y, int w) {
+        if (selectedSkill == null) {
+            for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.skills.hint"), w)) {
+                g.drawString(font, line, x, y, C_DIM, false);
+                y += 10;
+            }
+            if (!faygolover.rpperks.Config.get(faygolover.rpperks.Config.SKILL_GROWTH)) {
+                y += 4;
+                for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.skills.growth_off"), w)) {
+                    g.drawString(font, line, x, y, C_WARN, false);
+                    y += 10;
+                }
+            }
+            return;
+        }
+        var s = selectedSkill;
+        float[] v = data.getClientSkills().get(s.key());
+        int lvl = v != null ? (int) v[0] : 0;
+        g.drawString(font, Component.translatable(s.nameKey()), x, y, C_TITLE, false);
+        y += 12;
+        String src = v == null ? "trained" : switch ((int) v[2]) { case 1 -> "perk"; case 2 -> "gm"; default -> "trained"; };
+        g.drawString(font, Component.translatable("gui.rpperks.skills.level", lvl).append(" · ")
+                .append(Component.translatable("gui.rpperks.skills.source." + src)), x, y, C_TEXT, false);
+        y += 12;
+        if (v != null && lvl < 10) {
+            g.drawString(font, (int) (v[1] * 100) + "%", x, y, C_DIM, false);
+            y += 12;
+        } else if (lvl >= 10) {
+            g.drawString(font, Component.translatable("gui.rpperks.skills.max"), x, y, C_GOOD, false);
+            y += 12;
+        }
+        y += 4;
+        for (FormattedCharSequence line : font.split(Component.translatable(s.descKey()), w)) {
+            g.drawString(font, line, x, y, C_DIM, false);
+            y += 10;
+        }
+    }
+
     private void renderInfo(GuiGraphics g, PlayerPerks data) {
         int x = infoX + 6;
         int w = infoW - 12;
         int y = infoY + 6;
+        if (tab == Tab.SKILLS) {
+            renderSkillInfo(g, data, x, y, w);
+            return;
+        }
 
         if (selected == null) {
             for (FormattedCharSequence line : font.split(Component.translatable(adminMode

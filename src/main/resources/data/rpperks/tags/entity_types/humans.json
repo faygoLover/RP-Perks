@@ -1,0 +1,14 @@
+{
+  "replace": false,
+  "values": [
+    { "id": "customnpcs:customnpc", "required": false },
+    { "id": "tacznpcs:npc", "required": false },
+    { "id": "minecraft:villager", "required": false },
+    { "id": "minecraft:wandering_trader", "required": false },
+    { "id": "minecraft:pillager", "required": false },
+    { "id": "minecraft:vindicator", "required": false },
+    { "id": "minecraft:evoker", "required": false },
+    { "id": "minecraft:witch", "required": false },
+    { "id": "rpmedicine:body_stub", "required": false }
+  ]
+}
