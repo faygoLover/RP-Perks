@@ -130,13 +130,20 @@ public final class PerkMechanicsHandler {
         if (player.tickCount % 100 == 0) PerkEventHandler.syncToClient(player, data);
     }
 
+    /** Голод ведёт мод питания (RP Culinary): маленький желудок и обмен веществ — у него, по черте rpcore:anorexic. */
+    private static boolean culinary() {
+        return faygolover.rpcore.api.RpCoreAPI.nutritionHandles(faygolover.rpcore.api.RpIds.FOOD_HUNGER);
+    }
+
     // ---------- Анорексичка: предел сытости и таймер отказа ----------
     private static void tickAnorexia(ServerPlayer player, PlayerPerks data) {
         if (!data.hasPerk(Perk.ANOREXIC)) return;
-        FoodData food = player.getFoodData();
-        int maxFood = Config.get(Config.ANOREXIA_MAX_FOOD);
-        if (food.getFoodLevel() > maxFood) food.setFoodLevel(maxFood);
-        if (food.getSaturationLevel() > food.getFoodLevel()) food.setSaturation(food.getFoodLevel());
+        if (!culinary()) {
+            FoodData food = player.getFoodData();
+            int maxFood = Config.get(Config.ANOREXIA_MAX_FOOD);
+            if (food.getFoodLevel() > maxFood) food.setFoodLevel(maxFood);
+            if (food.getSaturationLevel() > food.getFoodLevel()) food.setSaturation(food.getFoodLevel());
+        }
 
         if (data.getAnorexiaTimer() > 0) {
             data.setAnorexiaTimer(data.getAnorexiaTimer() - 1);
@@ -205,7 +212,8 @@ public final class PerkMechanicsHandler {
             int food = player.getFoodData().getFoodLevel();
             FoodProperties properties = stack.getFoodProperties(player);
             boolean alwaysEdible = properties != null && properties.canAlwaysEat();
-            boolean full = !alwaysEdible && food >= Config.get(Config.ANOREXIA_MAX_FOOD);
+            // С RP Culinary «наелся» решает его желудок (у анорексички он меньше); здесь — только внезапные отказы.
+            boolean full = !alwaysEdible && !culinary() && food >= Config.get(Config.ANOREXIA_MAX_FOOD);
             boolean timerRunning = data.getAnorexiaTimer() > 0;
             // При нулевом голоде новый отказ не возникает, но уже идущий таймер не прерывается
             boolean newRefusal = !timerRunning && data.isRefuseNextMeal() && food > 0;

@@ -346,7 +346,7 @@ public final class Config {
         rpPerk(Perk.DIABETIC, "Требуется ежедневная доза инсулина (РП)");
 
         beginPerk(Perk.ANOREXIC, "Пониженный предел сытости и внезапные отказы от еды");
-        ANOREXIA_MAX_FOOD = B.comment(" Максимальный уровень голода (из 20; 14 = 7 окорочков)")
+        ANOREXIA_MAX_FOOD = B.comment(" Без RP Culinary: максимальный уровень голода (из 20; 14 = 7 окорочков). С ним — желудок меньше (настройки Кулинарии)")
                 .defineInRange("max_food_level", 14, 1, 20);
         ANOREXIA_REFUSE_CHANCE_PERCENT = B.comment(
                         " Шанс после каждого приёма пищи, что следующая попытка поесть будет отменена",

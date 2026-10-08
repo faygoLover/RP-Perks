@@ -128,7 +128,7 @@
   "perk.rpperks.diabetic.name": "§cДиабетик",
   "perk.rpperks.diabetic.desc": "Требуется ежедневная доза инсулина (РП).",
   "perk.rpperks.anorexic.name": "§cАнорексичка",
-  "perk.rpperks.anorexic.desc": "Не может наесться больше чем на 7 окорочков, иногда на время отказывается от еды.",
+  "perk.rpperks.anorexic.desc": "Маленький желудок: наедается быстро (без RP Culinary — не больше 7 окорочков), обмен веществ выше, иногда на время отказывается от еды.",
   "perk.rpperks.weakling.name": "§cЗадохлик",
   "perk.rpperks.weakling.desc": "Форма 0–2: меньше выносливости и медленнее восстановление. С ростом навыков пропадёт, когда Форма вырастет.",
   "perk.rpperks.homebody.name": "§cДомашний",

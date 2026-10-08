@@ -128,7 +128,7 @@
   "perk.rpperks.diabetic.name": "§cDiabetic",
   "perk.rpperks.diabetic.desc": "Needs a daily insulin dose (RP).",
   "perk.rpperks.anorexic.name": "§cAnorexic",
-  "perk.rpperks.anorexic.desc": "Can't fill up past 7 drumsticks and sometimes refuses food for a while.",
+  "perk.rpperks.anorexic.desc": "Small stomach: gets full quickly (without RP Culinary — at most 7 drumsticks), faster metabolism, sometimes refuses food for a while.",
   "perk.rpperks.weakling.name": "§cOut of Shape",
   "perk.rpperks.weakling.desc": "Fitness 0–2. With skill growth on, disappears when Fitness grows.",
   "perk.rpperks.homebody.name": "§cHomebody",

@@ -32,7 +32,8 @@ public final class CoreTraits implements TraitProvider {
             RpIds.SMOKER, Set.of(Perk.SMOKER),
             RpIds.ALCOHOLIC, Set.of(Perk.ALCOHOLIC),
             RpIds.TEETOTALER, Set.of(Perk.TEETOTALER),
-            RpIds.CAFFEINE_ADDICT, Set.of(Perk.CAFFEINE_ADDICTION));
+            RpIds.CAFFEINE_ADDICT, Set.of(Perk.CAFFEINE_ADDICTION),
+            RpIds.ANOREXIC, Set.of(Perk.ANOREXIC));
 
     private static PlayerPerks data(Player p) {
         return p.getCapability(PlayerPerksProvider.PLAYER_PERKS).resolve().orElse(null);
