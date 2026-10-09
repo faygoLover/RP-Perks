@@ -255,11 +255,13 @@ public class PerkScreen extends Screen {
             actionButton.visible = adminMode && v != null && (int) v[2] == 2;
             if (actionButton.visible) {
                 actionButton.active = true;
+                actionButton.setWidth(infoW - 8);
                 actionButton.setMessage(Component.translatable("gui.rpperks.button.skill_reset"));
             }
         } else if (data == null || selected == null) {
             actionButton.visible = false;
         } else {
+            if (adminMode) actionButton.setWidth((infoW - 10) / 2);
             actionButton.visible = true;
             boolean owned = data.owns(selected);
             if (adminMode) {
