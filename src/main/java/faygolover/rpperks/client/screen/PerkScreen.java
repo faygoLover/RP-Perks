@@ -125,8 +125,7 @@ public class PerkScreen extends Screen {
     }
 
     private List<Tab> visibleTabs() {
-        List<Tab> tabs = new ArrayList<>(List.of(Tab.MINE, Tab.MAIN, Tab.SKILL, Tab.NEGATIVE));
-        if (!adminMode) tabs.add(Tab.SKILLS);
+        List<Tab> tabs = new ArrayList<>(List.of(Tab.MINE, Tab.MAIN, Tab.SKILL, Tab.NEGATIVE, Tab.SKILLS));
         if (canSeeHidden) tabs.add(Tab.SERVICE);
         return tabs;
     }
@@ -249,9 +248,17 @@ public class PerkScreen extends Screen {
                     ? "gui.rpperks.button.selection_closed" : "gui.rpperks.button.selection_open"));
         }
 
-        if (data == null || selected == null || tab == Tab.SKILLS) {
+        if (tab == Tab.SKILLS) {
+            // У админа на вкладке навыков одна кнопка: снять уровень, выставленный ГМом
+            if (blockButton != null) blockButton.visible = false;
+            float[] v = data != null && selectedSkill != null ? data.getClientSkills().get(selectedSkill.key()) : null;
+            actionButton.visible = adminMode && v != null && (int) v[2] == 2;
+            if (actionButton.visible) {
+                actionButton.active = true;
+                actionButton.setMessage(Component.translatable("gui.rpperks.button.skill_reset"));
+            }
+        } else if (data == null || selected == null) {
             actionButton.visible = false;
-            if (blockButton != null && tab == Tab.SKILLS) blockButton.visible = false;
         } else {
             actionButton.visible = true;
             boolean owned = data.owns(selected);
@@ -309,6 +316,10 @@ public class PerkScreen extends Screen {
     }
 
     private void onAction() {
+        if (tab == Tab.SKILLS) {
+            if (adminMode && selectedSkill != null) admin(Action.ADMIN_SKILL_RESET, null, selectedSkill.ordinal());
+            return;
+        }
         PlayerPerks data = data();
         if (data == null || selected == null) return;
         boolean owned = data.owns(selected);
@@ -357,7 +368,24 @@ public class PerkScreen extends Screen {
         if (button == 0 && inList(mx, my) && tab == Tab.SKILLS) {
             int index = (int) Math.floor((my - listY - 2 + scroll) / SKILL_ROW);
             if (index >= 0 && index < faygolover.rpperks.skill.SkillDef.VALUES.length) {
-                selectedSkill = faygolover.rpperks.skill.SkillDef.VALUES[index];
+                var skill = faygolover.rpperks.skill.SkillDef.VALUES[index];
+                if (adminMode) {
+                    int rowY = listY + 2 - (int) scroll + index * SKILL_ROW;
+                    if (my >= rowY + 1 && my < rowY + 12) {
+                        if (mx >= plusX() && mx < plusX() + SKILL_BTN) {
+                            admin(Action.ADMIN_SKILL_UP, null, skill.ordinal());
+                            playClick();
+                            return true;
+                        }
+                        if (mx >= minusX() && mx < minusX() + SKILL_BTN) {
+                            admin(Action.ADMIN_SKILL_DOWN, null, skill.ordinal());
+                            playClick();
+                            return true;
+                        }
+                    }
+                }
+                selectedSkill = skill;
+                updateButtons();
                 return true;
             }
             return false;
@@ -499,15 +527,50 @@ public class PerkScreen extends Screen {
             else if (hover) g.fill(listX + 1, y, listX + LIST_W - 1, y + SKILL_ROW, C_HOVER);
             g.drawString(font, Component.translatable(s.nameKey()), listX + 4, y + 3, C_TEXT, false);
             String l = String.valueOf(lvl);
-            g.drawString(font, l, listX + LIST_W - 8 - font.width(l), y + 3, lvl >= 7 ? C_GOOD : lvl <= 1 ? C_BAD : C_TITLE, false);
+            int lvlColor = lvl >= 7 ? C_GOOD : lvl <= 1 ? C_BAD : C_TITLE;
+            if (adminMode) {
+                // [−] уровень [+]
+                skillButton(g, minusX(), y + 1, "-", mouseX, mouseY);
+                skillButton(g, plusX(), y + 1, "+", mouseX, mouseY);
+                int mid = (minusX() + SKILL_BTN + plusX()) / 2;
+                g.drawString(font, l, mid - font.width(l) / 2, y + 3, lvlColor, false);
+            } else {
+                g.drawString(font, l, listX + LIST_W - 8 - font.width(l), y + 3, lvlColor, false);
+            }
             int bx = listX + 4, bw = LIST_W - 12, by = y + 15;
             g.fill(bx, by, bx + bw, by + 4, 0xFF2A2E36);
-            for (int i = 1; i < 10; i++) g.fill(bx + bw * i / 10, by, bx + bw * i / 10 + 1, by + 4, 0xFF1B1E24);
             int filled = (int) (bw * Math.min(10, lvl + (lvl >= 10 ? 0 : frac)) / 10f);
             g.fill(bx, by, bx + filled, by + 4, 0xFFD4A537);
+            // Деления поверх заливки — видны и на заполненной части
+            for (int i = 1; i < 10; i++) {
+                int tx = bx + bw * i / 10;
+                g.fill(tx, by, tx + 1, by + 4, tx < bx + filled ? 0xFF7A5A12 : 0xFF1B1E24);
+            }
             y += SKILL_ROW;
         }
         g.disableScissor();
+    }
+
+    private static final int SKILL_BTN = 11;
+
+    private int plusX() {
+        return listX + LIST_W - 6 - SKILL_BTN;
+    }
+
+    private int minusX() {
+        return plusX() - SKILL_BTN - 16;
+    }
+
+    private void skillButton(GuiGraphics g, int x, int y, String label, int mouseX, int mouseY) {
+        boolean hover = mouseX >= x && mouseX < x + SKILL_BTN && mouseY >= y && mouseY < y + SKILL_BTN;
+        g.fill(x, y, x + SKILL_BTN, y + SKILL_BTN, C_BORDER);
+        g.fill(x + 1, y + 1, x + SKILL_BTN - 1, y + SKILL_BTN - 1, hover ? 0xFF3A3F4A : 0xFF23262D);
+        g.drawString(font, label, x + (SKILL_BTN - font.width(label)) / 2 + 1, y + 2, hover ? C_TITLE : C_TEXT, false);
+    }
+
+    private void playClick() {
+        Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
     }
 
     private void renderSkillInfo(GuiGraphics g, PlayerPerks data, int x, int y, int w) {
@@ -515,6 +578,13 @@ public class PerkScreen extends Screen {
             for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.skills.hint"), w)) {
                 g.drawString(font, line, x, y, C_DIM, false);
                 y += 10;
+            }
+            if (adminMode) {
+                y += 4;
+                for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.skills.admin_hint"), w)) {
+                    g.drawString(font, line, x, y, C_WARN, false);
+                    y += 10;
+                }
             }
             if (!faygolover.rpperks.Config.get(faygolover.rpperks.Config.SKILL_GROWTH)) {
                 y += 4;

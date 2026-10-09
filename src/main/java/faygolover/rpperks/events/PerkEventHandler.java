@@ -256,7 +256,12 @@ public final class PerkEventHandler {
     /** Отправляет игроку его данные и обновляет открытые у админов окна этого игрока. */
     public static void syncToClient(ServerPlayer player, PlayerPerks data) {
         NetworkHandler.sendToPlayer(player, SyncPerksPacket.of(data));
+        updateAdminScreens(player, data);
+    }
 
+    /** Обновляет открытые у админов окна этого игрока (перки и навыки). */
+    public static void updateAdminScreens(ServerPlayer player, PlayerPerks data) {
+        if (ADMIN_SCREENS.isEmpty()) return;
         UUID id = player.getUUID();
         ADMIN_SCREENS.forEach((adminId, targetId) -> {
             if (!targetId.equals(id)) return;

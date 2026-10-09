@@ -25,7 +25,11 @@ public class PerkActionPacket {
         ADMIN_RESET_TOKENS,
         ADMIN_TOGGLE_BLOCK,
         ADMIN_TOGGLE_SELECTION,
-        ADMIN_WIPE;
+        ADMIN_WIPE,
+        // Навыки: amount — номер навыка (SkillDef.ordinal). Уровень ставится «от ГМа», как /rpcore skill
+        ADMIN_SKILL_UP,
+        ADMIN_SKILL_DOWN,
+        ADMIN_SKILL_RESET;
 
         public boolean isAdmin() { return ordinal() >= ADMIN_GRANT.ordinal(); }
     }

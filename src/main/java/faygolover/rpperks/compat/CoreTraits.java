@@ -43,6 +43,12 @@ public final class CoreTraits implements TraitProvider {
             RpIds.KITCHEN_NIGHTMARE, Set.of(Perk.KITCHEN_NIGHTMARE),
             RpIds.FAST_METABOLISM, Set.of(Perk.FAST_METABOLISM),
             RpIds.SLOW_METABOLISM, Set.of(Perk.SLOW_METABOLISM));
+    /** Заживление и иммунитет (RP Medicine). */
+    private static final Map<ResourceLocation, Set<Perk>> BODY_TRAITS = Map.of(
+            RpIds.FAST_HEALING, Set.of(Perk.SURVIVOR),
+            RpIds.SLOW_HEALING, Set.of(Perk.FRAGILE),
+            RpIds.STRONG_IMMUNITY, Set.of(Perk.TOURIST),
+            RpIds.WEAK_IMMUNITY, Set.of(Perk.HOMEBODY));
 
     private static PlayerPerks data(Player p) {
         return p.getCapability(PlayerPerksProvider.PLAYER_PERKS).resolve().orElse(null);
@@ -75,7 +81,9 @@ public final class CoreTraits implements TraitProvider {
 
     @Override
     public boolean hasTrait(Player player, ResourceLocation trait) {
-        Set<Perk> perks = TRAITS.containsKey(trait) ? TRAITS.get(trait) : FOOD_TRAITS.get(trait);
+        Set<Perk> perks = TRAITS.get(trait);
+        if (perks == null) perks = FOOD_TRAITS.get(trait);
+        if (perks == null) perks = BODY_TRAITS.get(trait);
         if (perks == null) return false;
         PlayerPerks d = data(player);
         if (d == null) return false;

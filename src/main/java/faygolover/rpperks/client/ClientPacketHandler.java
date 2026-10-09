@@ -30,6 +30,7 @@ public final class ClientPacketHandler {
             if (!msg.open && !msg.targetId.equals(ClientPerkData.adminTargetId)) return;
             PlayerPerks snapshot = new PlayerPerks();
             msg.snapshot.applyTo(snapshot);
+            snapshot.setClientSkills(msg.skills.skills());
             ClientPerkData.adminTarget = snapshot;
             ClientPerkData.adminTargetId = msg.targetId;
         }

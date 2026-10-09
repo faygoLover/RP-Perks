@@ -216,6 +216,8 @@ public final class SkillService {
 
     public static void sync(ServerPlayer p) {
         PlayerPerks d = data(p);
-        if (d != null) NetworkHandler.sendToPlayer(p, SyncSkillsPacket.of(d));
+        if (d == null) return;
+        NetworkHandler.sendToPlayer(p, SyncSkillsPacket.of(d));
+        faygolover.rpperks.events.PerkEventHandler.updateAdminScreens(p, d);
     }
 }

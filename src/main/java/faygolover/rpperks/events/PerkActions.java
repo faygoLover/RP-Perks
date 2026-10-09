@@ -6,6 +6,8 @@ import faygolover.rpperks.capability.PlayerPerksProvider;
 import faygolover.rpperks.network.PerkActionPacket;
 import faygolover.rpperks.perk.Perk;
 import faygolover.rpperks.perk.PerkRules;
+import faygolover.rpperks.skill.SkillDef;
+import faygolover.rpperks.skill.SkillService;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
@@ -121,6 +123,19 @@ public final class PerkActions {
             case ADMIN_WIPE -> {
                 data.reset();
                 log = "очистил карточку";
+            }
+            case ADMIN_SKILL_UP, ADMIN_SKILL_DOWN, ADMIN_SKILL_RESET -> {
+                if (msg.amount < 0 || msg.amount >= SkillDef.VALUES.length) return;
+                SkillDef skill = SkillDef.VALUES[msg.amount];
+                int now = SkillService.level(data, skill);
+                int level = switch (msg.action) {
+                    case ADMIN_SKILL_UP -> Math.min(10, now + 1);
+                    case ADMIN_SKILL_DOWN -> Math.max(0, now - 1);
+                    default -> -1;
+                };
+                data.setSkillLevel(skill.id.toString(), level);
+                log = level < 0 ? "снял уровень ГМа навыка " + skill.key()
+                        : "поставил навык " + skill.key() + " на " + level;
             }
             default -> {
                 return;

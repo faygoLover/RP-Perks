@@ -83,6 +83,18 @@ public final class Config {
     public static final ForgeConfigSpec.IntValue PHYSICAL_IDLE_MINUTES;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> PERK_SKILLS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends Double>> T_SPREAD, T_RECOIL, T_RELOAD, T_AIM, T_MELEE_DAMAGE, T_MELEE_SPEED, T_EXPLOSIVE;
+
+    // Таблицы стрельбы. V1 — до 09.10.2026: на уровне 0 оружие слушалось слишком хорошо. Если в конфиге сервера
+    // осталась V1 без правок — при загрузке заменяется на V2 (своё, изменённое вручную, не трогаем).
+    private static final double[] SPREAD_V1 = {3.0, 2.2, 1.6, 1.35, 1.15, 1.0, 0.9, 0.8, 0.7, 0.62, 0.55};
+    private static final double[] RECOIL_V1 = {2.5, 1.9, 1.45, 1.25, 1.1, 1.0, 0.92, 0.84, 0.76, 0.68, 0.6};
+    private static final double[] RELOAD_V1 = {2.0, 1.6, 1.3, 1.18, 1.08, 1.0, 0.94, 0.87, 0.8, 0.72, 0.65};
+    private static final double[] AIM_V1 = RELOAD_V1;
+    // 0 и 1 — по решению 09.10, 2–4 — плавно (геометрически) от 1 к 5, 5–10 — как было.
+    private static final double[] SPREAD_V2 = {10.0, 7.0, 4.3, 2.65, 1.63, 1.0, 0.9, 0.8, 0.7, 0.62, 0.55};
+    private static final double[] RECOIL_V2 = {10.0, 5.0, 3.34, 2.24, 1.5, 1.0, 0.92, 0.84, 0.76, 0.68, 0.6};
+    private static final double[] RELOAD_V2 = {4.0, 3.0, 2.28, 1.73, 1.32, 1.0, 0.94, 0.87, 0.8, 0.72, 0.65};
+    private static final double[] AIM_V2 = {4.0, 4.0, 2.83, 2.0, 1.41, 1.0, 0.94, 0.87, 0.8, 0.72, 0.65};
     public static final ForgeConfigSpec.DoubleValue STRENGTH_MELEE_PER_LEVEL;
     public static final ForgeConfigSpec.DoubleValue STRENGTH_HEAVY_RECOIL_PER_LEVEL;
     public static final ForgeConfigSpec.IntValue CLUMSY_WEAPON_PENALTY;
@@ -172,7 +184,7 @@ public final class Config {
         // =====================================================================
         B.comment(" ОСНОВНЫЕ ПЕРКИ (положительные)").push("main_perks");
 
-        beginPerk(Perk.SURVIVOR, "Повышенное на 2.5 сердца ХП и более быстрое заживление (РП)");
+        beginPerk(Perk.SURVIVOR, "Повышенное на 2.5 сердца ХП. С RP Medicine вместо ХП: стойкость к шоку и кровопотере, заживление быстрее (числа — в конфиге Medicine)");
         bonus(Perk.SURVIVOR, Stat.MAX_HEALTH, 5.0);
         B.pop();
 
@@ -194,7 +206,7 @@ public final class Config {
         bonus(Perk.STRONGMAN, Stat.MELEE_KNOCKBACK, 30.0);
         B.pop();
 
-        beginPerk(Perk.TOURIST, "Устойчивость к температуре среды, крепкий иммунитет (РП)");
+        beginPerk(Perk.TOURIST, "Устойчивость к температуре среды (LSO). С RP Medicine — крепкий иммунитет");
         bonus(Perk.TOURIST, Stat.THERMAL_RESISTANCE, 2.0);
         B.pop();
 
@@ -318,10 +330,10 @@ public final class Config {
                         "melee_fighter = melee:5",
                         "soldier = short_arms:5, long_arms:5, heavy_arms:3, explosives:2, melee:3, medicine:2"
                 ), Config::isString);
-        T_SPREAD = table("weapon_spread", " Разброс оружия по уровню 0..10 (5 = как в TaCZ)", 3.0, 2.2, 1.6, 1.35, 1.15, 1.0, 0.9, 0.8, 0.7, 0.62, 0.55);
-        T_RECOIL = table("weapon_recoil", " Отдача по уровню 0..10", 2.5, 1.9, 1.45, 1.25, 1.1, 1.0, 0.92, 0.84, 0.76, 0.68, 0.6);
-        T_RELOAD = table("weapon_reload", " Время перезарядки по уровню 0..10", 2.0, 1.6, 1.3, 1.18, 1.08, 1.0, 0.94, 0.87, 0.8, 0.72, 0.65);
-        T_AIM = table("weapon_aim", " Время прицеливания по уровню 0..10", 2.0, 1.6, 1.3, 1.18, 1.08, 1.0, 0.94, 0.87, 0.8, 0.72, 0.65);
+        T_SPREAD = table("weapon_spread", " Разброс оружия по уровню 0..10 (5 = как в TaCZ)", SPREAD_V2);
+        T_RECOIL = table("weapon_recoil", " Отдача по уровню 0..10", RECOIL_V2);
+        T_RELOAD = table("weapon_reload", " Время перезарядки по уровню 0..10 (во сколько раз дольше)", RELOAD_V2);
+        T_AIM = table("weapon_aim", " Время прицеливания по уровню 0..10 (во сколько раз дольше)", AIM_V2);
         T_MELEE_DAMAGE = table("melee_damage", " Урон в ближнем бою (любое оружие и кулаки) по уровню 0..10", 0.7, 0.76, 0.82, 0.88, 0.94, 1.0, 1.08, 1.16, 1.24, 1.32, 1.4);
         T_MELEE_SPEED = table("melee_speed", " Скорость ударов по уровню 0..10", 0.8, 0.84, 0.88, 0.92, 0.96, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25);
         T_EXPLOSIVE = table("explosive_power", " Сила и радиус взрывов своего оружия по уровню «Взрывчатки» 0..10", 0.6, 0.68, 0.76, 0.84, 0.92, 1.0, 1.06, 1.12, 1.18, 1.24, 1.3);
@@ -340,7 +352,7 @@ public final class Config {
         // =====================================================================
         B.comment(" НЕГАТИВНЫЕ ПЕРКИ (cost — сколько баллов получает игрок)").push("negative_perks");
 
-        beginPerk(Perk.FRAGILE, "Пониженное на 2.5 сердца ХП и медленное заживление (РП)");
+        beginPerk(Perk.FRAGILE, "Пониженное на 2.5 сердца ХП. С RP Medicine вместо ХП: чаще переломы, заживление медленнее (числа — в конфиге Medicine)");
         bonus(Perk.FRAGILE, Stat.MAX_HEALTH, -5.0);
         B.pop();
 
@@ -366,7 +378,7 @@ public final class Config {
         bonus(Perk.WEAKLING, Stat.STAMINA_REGEN, -0.25);
         B.pop();
 
-        beginPerk(Perk.HOMEBODY, "Пониженная устойчивость к температуре и слабый иммунитет (РП)");
+        beginPerk(Perk.HOMEBODY, "Пониженная устойчивость к температуре (LSO). С RP Medicine — слабый иммунитет");
         bonus(Perk.HOMEBODY, Stat.THERMAL_RESISTANCE, -2.0);
         B.pop();
 
@@ -520,6 +532,19 @@ public final class Config {
         return B.comment(comment).defineList(key, def, o -> o instanceof Number);
     }
 
+    /** Таблица в конфиге совпадает со старой по умолчанию — записать новую. */
+    @SuppressWarnings("unchecked")
+    private static boolean upgradeTable(ForgeConfigSpec.ConfigValue<List<? extends Double>> t, double[] oldDef, double[] newDef) {
+        List<? extends Number> l = (List<? extends Number>) (List<?>) t.get();
+        if (l.size() != oldDef.length) return false;
+        for (int i = 0; i < oldDef.length; i++) if (Math.abs(l.get(i).doubleValue() - oldDef[i]) > 1e-9) return false;
+        List<Double> v = new ArrayList<>();
+        for (double d : newDef) v.add(d);
+        t.set(v);
+        t.save();
+        return true;
+    }
+
     /** Значение таблицы по уровню 0..10 (не хватает чисел — 1.0). */
     @SuppressWarnings("unchecked")
     public static double table(ForgeConfigSpec.ConfigValue<List<? extends Double>> t, int level) {
@@ -620,6 +645,10 @@ public final class Config {
     }
 
     private static void bake() {
+        boolean upgraded = upgradeTable(T_SPREAD, SPREAD_V1, SPREAD_V2) | upgradeTable(T_RECOIL, RECOIL_V1, RECOIL_V2)
+                | upgradeTable(T_RELOAD, RELOAD_V1, RELOAD_V2) | upgradeTable(T_AIM, AIM_V1, AIM_V2);
+        if (upgraded) Rpperks.LOGGER.info("[RP Perks] Таблицы стрельбы обновлены до новых значений по умолчанию (09.10.2026)");
+
         // Предметы с кофеином
         Set<ResourceLocation> items = new HashSet<>();
         for (String entry : CAFFEINE_ITEMS.get()) {

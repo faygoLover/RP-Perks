@@ -21,20 +21,24 @@ public class OpenPerkScreenPacket {
     public final String targetName;
     public final boolean canSeeHidden;
     public final SyncPerksPacket snapshot;
+    /** Навыки игрока для вкладки «Навыки» админского окна. */
+    public final SyncSkillsPacket skills;
 
     public OpenPerkScreenPacket(boolean open, boolean adminMode, UUID targetId, String targetName,
-                                boolean canSeeHidden, SyncPerksPacket snapshot) {
+                                boolean canSeeHidden, SyncPerksPacket snapshot, SyncSkillsPacket skills) {
         this.open = open;
         this.adminMode = adminMode;
         this.targetId = targetId;
         this.targetName = targetName;
         this.canSeeHidden = canSeeHidden;
         this.snapshot = snapshot;
+        this.skills = skills;
     }
 
     public static OpenPerkScreenPacket of(boolean open, boolean adminMode, UUID targetId, String targetName,
                                           boolean canSeeHidden, PlayerPerks data) {
-        return new OpenPerkScreenPacket(open, adminMode, targetId, targetName, canSeeHidden, SyncPerksPacket.of(data));
+        return new OpenPerkScreenPacket(open, adminMode, targetId, targetName, canSeeHidden, SyncPerksPacket.of(data),
+                SyncSkillsPacket.of(data));
     }
 
     public static void encode(OpenPerkScreenPacket msg, FriendlyByteBuf buf) {
@@ -44,6 +48,7 @@ public class OpenPerkScreenPacket {
         buf.writeUtf(msg.targetName);
         buf.writeBoolean(msg.canSeeHidden);
         SyncPerksPacket.encode(msg.snapshot, buf);
+        SyncSkillsPacket.encode(msg.skills, buf);
     }
 
     public static OpenPerkScreenPacket decode(FriendlyByteBuf buf) {
@@ -53,7 +58,8 @@ public class OpenPerkScreenPacket {
         String name = buf.readUtf();
         boolean canSeeHidden = buf.readBoolean();
         SyncPerksPacket snapshot = SyncPerksPacket.decode(buf);
-        return new OpenPerkScreenPacket(open, admin, target, name, canSeeHidden, snapshot);
+        SyncSkillsPacket skills = SyncSkillsPacket.decode(buf);
+        return new OpenPerkScreenPacket(open, admin, target, name, canSeeHidden, snapshot, skills);
     }
 
     public static void handle(OpenPerkScreenPacket msg, Supplier<NetworkEvent.Context> ctx) {
