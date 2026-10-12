@@ -15,8 +15,8 @@ import net.minecraftforge.fml.common.Mod;
 /**
  * Всего две команды — всё остальное делается в окне:
  * <ul>
- *   <li>/perks — окно своих перков;</li>
- *   <li>/perksadmin &lt;ник&gt; — админское окно игрока (без ника — своё).</li>
+ *   <li>/rpperks — окно своих перков;</li>
+ *   <li>/rpperks admin &lt;ник&gt; — админское окно игрока (без ника — своё).</li>
  * </ul>
  */
 @Mod.EventBusSubscriber(modid = Rpperks.MODID)
@@ -30,13 +30,19 @@ public final class PerkCommands {
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
-        dispatcher.register(Commands.literal("perks")
-                .executes(ctx -> openSelf(ctx.getSource())));
+        dispatcher.register(Commands.literal("rpperks")
+                .executes(ctx -> openSelf(ctx.getSource()))
+                .then(Commands.literal("admin").requires(s -> s.hasPermission(ADMIN_LEVEL))
+                        .executes(ctx -> openAdmin(ctx.getSource(), ctx.getSource().getPlayer()))
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .executes(ctx -> openAdmin(ctx.getSource(), EntityArgument.getPlayer(ctx, "target"))))));
+    }
 
-        dispatcher.register(Commands.literal("perksadmin").requires(s -> s.hasPermission(ADMIN_LEVEL))
-                .executes(ctx -> openAdmin(ctx.getSource(), ctx.getSource().getPlayer()))
-                .then(Commands.argument("target", EntityArgument.player())
-                        .executes(ctx -> openAdmin(ctx.getSource(), EntityArgument.getPlayer(ctx, "target")))));
+    /** Команды для общего списка {@code /rpcore commands}. */
+    public static void describe() {
+        faygolover.rpcore.api.RpCoreAPI.registerCommand(Rpperks.MODID, "/rpperks", "commands.rpperks.help.self", 0, false);
+        faygolover.rpcore.api.RpCoreAPI.registerCommand(Rpperks.MODID, "/rpperks admin [игрок]", "commands.rpperks.help.admin",
+                ADMIN_LEVEL, false);
     }
 
     private static int openSelf(CommandSourceStack source) {

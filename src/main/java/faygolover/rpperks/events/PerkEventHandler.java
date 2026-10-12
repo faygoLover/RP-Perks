@@ -105,7 +105,7 @@ public final class PerkEventHandler {
         boolean wasFullHealth = oldHealth >= player.getMaxHealth();
 
         clearDynamicModifiers(player);
-        // Навыки: купленный физический перк задаёт стартовую Силу/Форму, дальше перки следуют за уровнем.
+        // Навыки: купленный физический перк задаёт стартовую Силу/Телосложение, дальше перки следуют за уровнем.
         faygolover.rpperks.skill.SkillService.syncPhysique(data);
 
         if (data.isAdmin()) {

@@ -20,7 +20,7 @@ import java.util.Map;
 /**
  * Навыки 0–10 (решения 08.10.2026). Итоговый уровень = уровень ГМа, иначе наработанный, но не ниже уровня от
  * перков (от нескольких — наибольший); Плохая координация −1 к огнестрелу, Пацифист — боевые не выше 1.
- * Рост — от практики (отключается в конфиге): каждый уровень дороже. Сила и Форма — физические: от перков не
+ * Рост — от практики (отключается в конфиге): каждый уровень дороже. Сила и Телосложение — физические: от перков не
  * зависят, а сами двигают динамические перки (Слабак ↔ Силач, Задохлик ↔ Выносливый ↔ Атлет) без баллов;
  * без нагрузки медленно падают.
  */
@@ -91,6 +91,11 @@ public final class SkillService {
         return Config.get(Config.XP_BASE) * Math.pow(Config.get(Config.XP_GROWTH), level);
     }
 
+    /** Опыт на следующий уровень навыка: Сила и Телосложение дороже в {@code physical_xp_cost} раз. */
+    public static double need(SkillDef s, int level) {
+        return need(level) * (s.kind == SkillDef.Kind.PHYSICAL ? Config.get(Config.PHYSICAL_XP_COST) : 1.0);
+    }
+
     // ------------------------------------------------------------------ рост
 
     public static void practice(ServerPlayer p, SkillDef s, double amount) {
@@ -99,7 +104,7 @@ public final class SkillService {
         if (d == null || d.isAdmin() || d.getSkillLevel(s.id.toString()) >= 0) return;
         double mult = Config.get(Config.XP_MULTIPLIER);
         if (s == SkillDef.MEDICINE) mult *= Config.get(Config.XP_MEDICINE);
-        // Сила и Форма: RP Stamina сообщает сотни потраченной выносливости.
+        // Сила и Телосложение: RP Stamina сообщает сотни потраченной выносливости.
         if (s.kind == SkillDef.Kind.PHYSICAL) mult *= Config.get(Config.XP_PER_100_STAMINA);
         if (d.hasPerk(Perk.PACIFIST)) mult *= s.isCombat() ? Config.get(Config.PACIFIST_COMBAT_XP)
                 : s.kind == SkillDef.Kind.KNOWLEDGE ? Config.get(Config.PACIFIST_PEACE_XP) : 1.0;
@@ -108,8 +113,8 @@ public final class SkillService {
         if (lvl >= 10) return;
         double xp = d.getSkillXp(s.key()) + amount * mult;
         boolean up = false;
-        while (lvl < 10 && xp >= need(lvl)) {
-            xp -= need(lvl);
+        while (lvl < 10 && xp >= need(s, lvl)) {
+            xp -= need(s, lvl);
             lvl++;
             up = true;
         }
@@ -123,9 +128,9 @@ public final class SkillService {
         }
     }
 
-    /** Раз в минуту в сети: Сила и Форма без нагрузки медленно падают. */
+    /** Раз в минуту в сети: Сила и Телосложение без нагрузки медленно падают. */
     public static void minuteTick(ServerPlayer p, PlayerPerks d) {
-        if (!Config.get(Config.SKILL_GROWTH) || d.isAdmin()) return;
+        if (!Config.get(Config.SKILL_GROWTH) || !Config.get(Config.PHYSICAL_DECAY_ENABLED) || d.isAdmin()) return;
         d.setIdleMinutes(d.getIdleMinutes() + 1);
         if (d.getIdleMinutes() < Config.get(Config.PHYSICAL_IDLE_MINUTES)) return;
         double decay = Config.get(Config.PHYSICAL_DECAY_PER_MINUTE);
@@ -144,7 +149,7 @@ public final class SkillService {
             }
             lvl--;
             d.setTrained(s.key(), lvl);
-            d.setSkillXp(s.key(), need(lvl) * 0.9);
+            d.setSkillXp(s.key(), need(s, lvl) * 0.9);
             p.displayClientMessage(Component.translatable("message.rpperks.skill_down", Component.translatable(s.nameKey()), lvl)
                     .withStyle(ChatFormatting.GRAY), false);
             levelChanged(p, d, s);
@@ -177,13 +182,13 @@ public final class SkillService {
         if (Config.get(Config.SKILL_GROWTH)) updatePhysique(d);
     }
 
-    /** Динамические перки по текущим уровням Силы и Формы (без баллов). */
+    /** Динамические перки по текущим уровням Силы и Телосложения (без баллов). */
     public static void updatePhysique(PlayerPerks d) {
         if (!Config.get(Config.SKILL_GROWTH)) return;
         for (Band b : PHYSIQUE) {
             int lvl = level(d, b.skill());
             boolean want = lvl >= b.min() && lvl <= b.max();
-            // Черепаха (купленный негативный перк) не даёт стать Атлетом: Форма упирается в «Выносливого».
+            // Черепаха (купленный негативный перк) не даёт стать Атлетом: Телосложение упирается в «Выносливого».
             if (b.perk() == Perk.ATHLETE && d.owns(Perk.TURTLE)) want = false;
             if (b.perk() == Perk.ENDURING && d.owns(Perk.TURTLE) && lvl >= 9) want = true;
             if (d.owns(b.perk()) != want) {

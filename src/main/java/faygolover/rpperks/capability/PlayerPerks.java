@@ -40,7 +40,7 @@ public class PlayerPerks {
     private final Map<String, Double> skillXp = new java.util.HashMap<>();
     /** Физические перки, стартовый уровень которых уже применён (Силач → Сила 7 и т. п.). */
     private final Set<String> physiqueApplied = new java.util.HashSet<>();
-    /** Минут в сети без физической нагрузки (для потери Силы и Формы). */
+    /** Минут в сети без физической нагрузки (для потери Силы и Телосложения). */
     private int idleMinutes;
     /** Клиент: итоговые уровни, опыт (доля) и источник по навыкам — из пакета навыков. */
     private Map<String, float[]> clientSkills = Map.of();
@@ -177,7 +177,7 @@ public class PlayerPerks {
     public void setClientSkills(Map<String, float[]> skills) { clientSkills = Map.copyOf(skills); }
 
     /**
-     * Динамический перк (Сила, Форма): появляется и пропадает сам, баллы не трогает (решение 08.10:
+     * Динамический перк (Сила, Телосложение): появляется и пропадает сам, баллы не трогает (решение 08.10:
      * Слабак может накачаться до Силача без возврата или списания очков).
      */
     public void setDynamicPerk(Perk perk, boolean has) {

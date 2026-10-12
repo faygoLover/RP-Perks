@@ -1,5 +1,7 @@
 package faygolover.rpperks.perk;
 
+import faygolover.rpcore.api.RpCoreAPI;
+import faygolover.rpcore.api.StaminaProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -13,8 +15,8 @@ import java.util.function.Supplier;
  * Характеристики, которыми управляет мод.
  * База для всех игроков задаётся в конфиге ([baseline]), перки добавляют к ней свои изменения.
  * <p>
- * Характеристики выносливости (STAMINA_*) — атрибуты мода rpstamina. Они подключены по id,
- * без зависимости при компиляции: если rpstamina не установлен, эти характеристики просто пропускаются.
+ * Характеристики выносливости (STAMINA_*) — атрибуты мода выносливости (RP Stamina), их даёт розетка выносливости
+ * RP Core: если мода выносливости нет, эти характеристики просто пропускаются.
  */
 public enum Stat {
     MAX_HEALTH("max_health", "Максимальное здоровье (2.0 = одно сердце)", "20.0",
@@ -46,26 +48,31 @@ public enum Stat {
 
     // ---- rpstamina ----
     STAMINA_MAX("stamina_max", "RP Stamina: максимальная выносливость", "1000",
-            1000.0, 1.0, 100000.0, "rpstamina", "max_stamina"),
+            1000.0, 1.0, 100000.0, stamina(StaminaProvider.Stat.MAX)),
     STAMINA_REGEN("stamina_regen_multiplier", "RP Stamina: множитель восстановления (1.0 = обычное, 1.25 = на 25% быстрее)", "1.0",
-            1.0, 0.0, 10.0, "rpstamina", "regen_multiplier"),
+            1.0, 0.0, 10.0, stamina(StaminaProvider.Stat.REGEN)),
     STAMINA_COST("stamina_cost_multiplier", "RP Stamina: общий множитель расхода (1.0 = обычный, 0.85 = на 15% меньше)", "1.0",
-            1.0, 0.0, 10.0, "rpstamina", "cost_multiplier"),
+            1.0, 0.0, 10.0, stamina(StaminaProvider.Stat.COST)),
     STAMINA_MOVE_COST("stamina_move_cost_multiplier", "RP Stamina: множитель расхода на бег, прыжки и лестницы", "1.0",
-            1.0, 0.0, 10.0, "rpstamina", "move_cost_multiplier"),
+            1.0, 0.0, 10.0, stamina(StaminaProvider.Stat.MOVE_COST)),
     STAMINA_SWIM_COST("stamina_swim_cost_multiplier", "RP Stamina: множитель расхода на плавание", "1.0",
-            1.0, 0.0, 10.0, "rpstamina", "swim_cost_multiplier"),
+            1.0, 0.0, 10.0, stamina(StaminaProvider.Stat.SWIM_COST)),
     STAMINA_MINE_COST("stamina_mine_cost_multiplier", "RP Stamina: множитель расхода на добычу блоков", "1.0",
-            1.0, 0.0, 10.0, "rpstamina", "mine_cost_multiplier"),
+            1.0, 0.0, 10.0, stamina(StaminaProvider.Stat.MINE_COST)),
     STAMINA_MELEE_COST("stamina_melee_cost_multiplier", "RP Stamina: множитель расхода на удары и размахи в ближнем бою", "1.0",
-            1.0, 0.0, 10.0, "rpstamina", "melee_cost_multiplier"),
+            1.0, 0.0, 10.0, stamina(StaminaProvider.Stat.MELEE_COST)),
     STAMINA_ARMOR_BURDEN("stamina_armor_burden", "RP Stamina: влияние веса брони на расход движения (1.0 = обычно, 0 = броня не мешает)", "1.0",
-            1.0, 0.0, 10.0, "rpstamina", "armor_burden"),
+            1.0, 0.0, 10.0, stamina(StaminaProvider.Stat.ARMOR_BURDEN)),
 
     THERMAL_RESISTANCE("thermal_resistance", "Legendary Survival Overhaul: терморезистентность", "значение LSO",
             2.0, -100.0, 100.0, "legendarysurvivaloverhaul", "thermal_resistance"),
     INVENTORY_SLOTS("inventory_slots", "Доступные слоты инвентаря (через команду inventory_slots_command)", "36",
             18.0, 0.0, 100.0, Kind.COMMAND);
+
+    /** Атрибут выносливости через розетку RP Core (null — мода выносливости нет). */
+    private static Supplier<Attribute> stamina(StaminaProvider.Stat stat) {
+        return () -> RpCoreAPI.staminaAttribute(stat);
+    }
 
     public enum Kind {
         /** Атрибут сущности (ванильный, Forge или стороннего мода). */

@@ -22,7 +22,7 @@ public record SyncSkillsPacket(Map<String, float[]> skills) {
         for (SkillDef s : SkillDef.VALUES) {
             int lvl = SkillService.level(d, s);
             int base = SkillService.base(d, s);
-            float frac = base >= 10 ? 1f : (float) Math.min(1.0, d.getSkillXp(s.key()) / SkillService.need(base));
+            float frac = base >= 10 ? 1f : (float) Math.min(1.0, d.getSkillXp(s.key()) / SkillService.need(s, base));
             m.put(s.key(), new float[]{lvl, frac, SkillService.source(d, s).ordinal(), SkillService.perkFloor(d, s)});
         }
         return new SyncSkillsPacket(m);

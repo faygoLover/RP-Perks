@@ -79,6 +79,8 @@ public final class Config {
     public static final ForgeConfigSpec.DoubleValue XP_PER_100_STAMINA;
     public static final ForgeConfigSpec.DoubleValue XP_MEDICINE;
     public static final ForgeConfigSpec.IntValue PHYSICAL_START;
+    public static final ForgeConfigSpec.DoubleValue PHYSICAL_XP_COST;
+    public static final ForgeConfigSpec.BooleanValue PHYSICAL_DECAY_ENABLED;
     public static final ForgeConfigSpec.DoubleValue PHYSICAL_DECAY_PER_MINUTE;
     public static final ForgeConfigSpec.IntValue PHYSICAL_IDLE_MINUTES;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> PERK_SKILLS;
@@ -142,8 +144,8 @@ public final class Config {
                 .push("general");
 
         HIDDEN_PERKS = B.comment(
-                        " Перки, которые обычный игрок не видит в окне /perks и не может взять.",
-                        " Операторы (уровень 2+) видят их и выдают через /perksadmin <ник>.",
+                        " Перки, которые обычный игрок не видит в окне /rpperks и не может взять.",
+                        " Операторы (уровень 2+) видят их и выдают через /rpperks admin <ник>.",
                         " Указываются ID перков, например: [\"admin\", \"nerd_rage\"]")
                 .defineListAllowEmpty(List.of("hidden_perks"), List.of("admin"), Config::isString);
 
@@ -155,10 +157,10 @@ public final class Config {
 
         // =====================================================================
         B.comment(
-                        " Самостоятельный выбор перков через окно (/perks).",
+                        " Самостоятельный выбор перков через окно (/rpperks).",
                         " Взятый перк остаётся навсегда: отказаться от одного перка можно только за жетон отказа,",
                         " сбросить все — за жетон сброса. Жетоны выдаёт администрация:",
-                        " в окне /perksadmin <ник>. Там же можно запретить игроку конкретные перки или закрыть ему выбор целиком.")
+                        " в окне /rpperks admin <ник>. Там же можно запретить игроку конкретные перки или закрыть ему выбор целиком.")
                 .push("selection");
         PLAYERS_CAN_SELECT = B.comment(" Могут ли игроки сами брать перки в окне. false — только выдача администрацией")
                 .define("players_can_select", true);
@@ -311,15 +313,19 @@ public final class Config {
         XP_GUN_HIT = B.comment(" Опыт оружейного навыка за попадание по живой цели").defineInRange("xp_gun_hit", 1.0, 0.0, 1000.0);
         XP_EXPLOSIVE_SHOT = B.comment(" Опыт «Взрывчатки» за выстрел из гранатомёта").defineInRange("xp_explosive_shot", 1.0, 0.0, 1000.0);
         XP_MELEE_HIT = B.comment(" Опыт ближнего боя за удар по живой цели").defineInRange("xp_melee_hit", 1.0, 0.0, 1000.0);
-        XP_PER_100_STAMINA = B.comment(" Опыт Силы/Формы за каждые 100 потраченной выносливости (нужен RP Stamina)")
+        XP_PER_100_STAMINA = B.comment(" Опыт Силы/Телосложения за каждые 100 потраченной выносливости (нужен RP Stamina)")
                 .defineInRange("xp_per_100_stamina", 1.0, 0.0, 1000.0);
         XP_MEDICINE = B.comment(" Множитель опыта Медицины (сколько даёт лечение — решает RP Medicine)").defineInRange("xp_medicine", 1.0, 0.0, 100.0);
-        PHYSICAL_START = B.comment(" Сила и Форма у игрока без физических перков").defineInRange("physical_start_level", 4, 0, 10);
-        PHYSICAL_DECAY_PER_MINUTE = B.comment(" Сила и Форма без нагрузки: потеря опыта за минуту в сети").defineInRange("physical_decay_per_minute", 1.0, 0.0, 1000.0);
+        PHYSICAL_START = B.comment(" Сила и Телосложение у игрока без физических перков").defineInRange("physical_start_level", 4, 0, 10);
+        PHYSICAL_XP_COST = B.comment(" Сила и Телосложение: во сколько раз больше опыта нужно на уровень, чем другим навыкам")
+                .defineInRange("physical_xp_cost", 10.0, 0.1, 1000.0);
+        PHYSICAL_DECAY_ENABLED = B.comment(" Сила и Телосложение без нагрузки падают (false — не падают никогда)")
+                .define("physical_decay_enabled", true);
+        PHYSICAL_DECAY_PER_MINUTE = B.comment(" Сила и Телосложение без нагрузки: потеря опыта за минуту в сети").defineInRange("physical_decay_per_minute", 1.0, 0.0, 1000.0);
         PHYSICAL_IDLE_MINUTES = B.comment(" Без нагрузки столько минут в сети — начинается потеря").defineInRange("physical_idle_minutes", 30, 0, 100000);
         PERK_SKILLS = B.comment(" Уровни навыков от перков: \"перк = навык:уровень, ...\". Перк даёт МИНИМУМ уровня; от нескольких перков берётся наибольший.",
                         " Навыки: medicine, cooking, short_arms, long_arms, heavy_arms, explosives, melee.",
-                        " Сила и Форма от перков не задаются: Силач/Слабак, Атлет/Выносливый/Задохлик — динамические (зависят от уровня).")
+                        " Сила и Телосложение от перков не задаются: Силач/Слабак, Атлет/Выносливый/Задохлик — динамические (зависят от уровня).")
                 .defineListAllowEmpty(List.of("perk_skills"), List.of(
                         "first_aid = medicine:3",
                         "medic = medicine:8",
