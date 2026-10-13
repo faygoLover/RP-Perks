@@ -67,7 +67,15 @@ public final class PerkEventHandler {
 
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) refresh(player);
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        refresh(player);
+        // 2.0.0: старые версии особенностей сняты с возвратом очков — сказать игроку один раз.
+        player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
+            if (data.getMigrationRefunded() < 0) return;
+            player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.rpperks.migrated_2",
+                    data.getMigrationRefunded()).withStyle(net.minecraft.ChatFormatting.GOLD));
+            data.setMigrationRefunded(-1);
+        });
     }
 
     @SubscribeEvent
@@ -105,7 +113,7 @@ public final class PerkEventHandler {
         boolean wasFullHealth = oldHealth >= player.getMaxHealth();
 
         clearDynamicModifiers(player);
-        // Навыки: купленный физический перк задаёт стартовую Силу/Телосложение, дальше перки следуют за уровнем.
+        // Навыки: взятая физическая особенность сдвигает Силу или Телосложение (старт).
         faygolover.rpperks.skill.SkillService.syncPhysique(data);
 
         if (data.isAdmin()) {
@@ -121,6 +129,8 @@ public final class PerkEventHandler {
             data.setCachedStats(stats);
             applyStats(player, stats);
         }
+        // Баффы Силы и Телосложения по уровню (у Админа снимаются).
+        faygolover.rpperks.skill.PhysicalEffects.apply(player, data);
 
         // Сохраняем здоровье после смены максимума
         player.setHealth(wasFullHealth ? player.getMaxHealth() : Math.min(oldHealth, player.getMaxHealth()));
@@ -223,7 +233,7 @@ public final class PerkEventHandler {
     }
 
     /** Включает, обновляет или снимает временный модификатор. */
-    static void setModifier(Player player, @Nullable Attribute attribute, UUID id, String name,
+    public static void setModifier(Player player, @Nullable Attribute attribute, UUID id, String name,
                             double amount, AttributeModifier.Operation operation, boolean active) {
         if (attribute == null) return;
         AttributeInstance instance = player.getAttribute(attribute);

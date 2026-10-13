@@ -62,7 +62,9 @@ public class PerkScreen extends Screen {
         NEGATIVE("negative", Perk.Category.NEGATIVE),
         SERVICE("service", Perk.Category.SERVICE),
         /** Навыки 0–10: уровень, опыт, откуда уровень (свои данные игрока). */
-        SKILLS("skills", null);
+        SKILLS("skills", null),
+        /** Анкета тела (RP Core): пол, возраст, рост — игрок заполняет один раз. */
+        PROFILE("profile", null);
 
         final String key;
         @Nullable final Perk.Category category;
@@ -100,6 +102,15 @@ public class PerkScreen extends Screen {
     @Nullable private String pendingKey;
     private long pendingUntil;
 
+    // Анкета тела (своя, только в режиме игрока)
+    private final List<Button> profileButtons = new ArrayList<>();
+    @Nullable private Button sexButton;
+    @Nullable private Button saveProfileButton;
+    private faygolover.rpcore.api.BodyProfile.Sex profSex = faygolover.rpcore.api.BodyProfile.Sex.NONE;
+    private int profAge = faygolover.rpcore.api.BodyProfile.DEFAULT_AGE;
+    private int profHeight = (int) faygolover.rpcore.api.BodyProfile.DEFAULT_HEIGHT;
+    private boolean profLoaded;
+
     public PerkScreen(boolean adminMode, UUID targetId, String targetName, boolean canSeeHidden) {
         super(adminMode
                 ? Component.translatable("gui.rpperks.title.admin", targetName)
@@ -126,12 +137,13 @@ public class PerkScreen extends Screen {
 
     private List<Tab> visibleTabs() {
         List<Tab> tabs = new ArrayList<>(List.of(Tab.MINE, Tab.MAIN, Tab.SKILL, Tab.NEGATIVE, Tab.SKILLS));
+        if (!adminMode) tabs.add(Tab.PROFILE);
         if (canSeeHidden) tabs.add(Tab.SERVICE);
         return tabs;
     }
 
     private List<Perk> rows(PlayerPerks data) {
-        if (tab == Tab.SKILLS) return List.of();
+        if (tab == Tab.SKILLS || tab == Tab.PROFILE) return List.of();
         if (tab == Tab.MINE) {
             return data.getActivePerks().stream().filter(p -> PerkRules.isVisible(p, canSeeHidden)).toList();
         }
@@ -187,6 +199,23 @@ public class PerkScreen extends Screen {
                     .bounds(infoX + 4, buttonY, infoW - 8, 18).build());
         }
 
+        // Анкета тела: кнопки в левой панели, видны только на своей вкладке
+        profileButtons.clear();
+        if (!adminMode) {
+            int bx = listX + LIST_W - 6;
+            int py = listY + 10;
+            sexButton = profileButton(Component.empty(), bx - 90, py, 90, () -> profSex = nextSex(profSex));
+            profileButton(Component.literal("-5"), bx - 90, py + 26, 20, () -> profAge -= 5);
+            profileButton(Component.literal("-1"), bx - 68, py + 26, 20, () -> profAge -= 1);
+            profileButton(Component.literal("+1"), bx - 42, py + 26, 20, () -> profAge += 1);
+            profileButton(Component.literal("+5"), bx - 20, py + 26, 20, () -> profAge += 5);
+            profileButton(Component.literal("-5"), bx - 90, py + 52, 20, () -> profHeight -= 5);
+            profileButton(Component.literal("-1"), bx - 68, py + 52, 20, () -> profHeight -= 1);
+            profileButton(Component.literal("+1"), bx - 42, py + 52, 20, () -> profHeight += 1);
+            profileButton(Component.literal("+5"), bx - 20, py + 52, 20, () -> profHeight += 5);
+            saveProfileButton = profileButton(Component.empty(), listX + 6, py + 84, LIST_W - 12, this::onSaveProfile);
+        }
+
         int by = bottomY + 6;
         if (!adminMode) {
             resetButton = addRenderableWidget(Button.builder(Component.empty(), b -> onReset())
@@ -213,12 +242,55 @@ public class PerkScreen extends Screen {
         updateButtons();
     }
 
+    private Button profileButton(Component label, int x, int y, int w, Runnable action) {
+        Button b = addRenderableWidget(Button.builder(label, btn -> {
+            action.run();
+            clampProfile();
+            pendingKey = null;
+            updateButtons();
+        }).bounds(x, y, w, 18).build());
+        profileButtons.add(b);
+        return b;
+    }
+
+    private static faygolover.rpcore.api.BodyProfile.Sex nextSex(faygolover.rpcore.api.BodyProfile.Sex s) {
+        return switch (s) {
+            case NONE -> faygolover.rpcore.api.BodyProfile.Sex.MALE;
+            case MALE -> faygolover.rpcore.api.BodyProfile.Sex.FEMALE;
+            case FEMALE -> faygolover.rpcore.api.BodyProfile.Sex.NONE;
+        };
+    }
+
+    private void clampProfile() {
+        profAge = Mth.clamp(profAge, faygolover.rpcore.api.BodyProfile.MIN_AGE, faygolover.rpcore.api.BodyProfile.MAX_AGE);
+        profHeight = Mth.clamp(profHeight, (int) faygolover.rpcore.api.BodyProfile.MIN_HEIGHT, (int) faygolover.rpcore.api.BodyProfile.MAX_HEIGHT);
+    }
+
+    /** Своя анкета (копия с сервера). */
+    private faygolover.rpcore.api.BodyProfile ownProfile() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.player == null ? faygolover.rpcore.api.BodyProfile.DEFAULT : faygolover.rpcore.api.RpCoreAPI.profile(mc.player);
+    }
+
+    private void onSaveProfile() {
+        if (ownProfile().filled() || !confirm("profile")) return;
+        faygolover.rpcore.api.RpCoreAPI.submitProfile(profSex, profAge, profHeight);
+        playClick();
+    }
+
     private void small(String label, int x, int y, int w, Runnable action) {
         addRenderableWidget(Button.builder(Component.literal(label), b -> action.run()).bounds(x, y, w, 18).build());
     }
 
     private void selectTab(Tab t) {
         tab = t;
+        if (t == Tab.PROFILE && !profLoaded) {
+            var prof = ownProfile();
+            profSex = prof.sex();
+            profAge = prof.age();
+            profHeight = (int) Math.round(prof.heightCm());
+            profLoaded = true;
+        }
         scroll = 0;
         pendingKey = null;
         updateButtons();
@@ -234,6 +306,18 @@ public class PerkScreen extends Screen {
     private void updateButtons() {
         tabButtons.forEach((t, b) -> b.active = t != tab);
         PlayerPerks data = data();
+        boolean profileTab = tab == Tab.PROFILE;
+        boolean profileLocked = ownProfile().filled();
+        for (Button b : profileButtons) {
+            b.visible = profileTab;
+            b.active = !profileLocked;
+        }
+        if (sexButton != null) sexButton.setMessage(Component.translatable("rpcore.profile.sex." + profSex.id()));
+        if (saveProfileButton != null) {
+            saveProfileButton.setMessage(isPending("profile")
+                    ? Component.translatable("gui.rpperks.button.confirm")
+                    : Component.translatable(profileLocked ? "gui.rpperks.profile.saved" : "gui.rpperks.profile.save"));
+        }
 
         if (blockButton != null) {
             blockButton.visible = data != null && selected != null && selected.getCategory() != Perk.Category.SERVICE;
@@ -248,7 +332,10 @@ public class PerkScreen extends Screen {
                     ? "gui.rpperks.button.selection_closed" : "gui.rpperks.button.selection_open"));
         }
 
-        if (tab == Tab.SKILLS) {
+        if (profileTab) {
+            actionButton.visible = false;
+            if (blockButton != null) blockButton.visible = false;
+        } else if (tab == Tab.SKILLS) {
             // У админа на вкладке навыков одна кнопка: снять уровень, выставленный ГМом
             if (blockButton != null) blockButton.visible = false;
             float[] v = data != null && selectedSkill != null ? data.getClientSkills().get(selectedSkill.key()) : null;
@@ -460,6 +547,15 @@ public class PerkScreen extends Screen {
     }
 
     private void renderList(GuiGraphics g, PlayerPerks data, int mouseX, int mouseY) {
+        if (tab == Tab.PROFILE) {
+            int py = listY + 10;
+            g.drawString(font, Component.translatable("gui.rpperks.profile.sex"), listX + 6, py + 5, C_TEXT, false);
+            g.drawString(font, Component.translatable("gui.rpperks.profile.age"), listX + 6, py + 31, C_TEXT, false);
+            g.drawString(font, String.valueOf(profAge), listX + 52, py + 31, C_TITLE, false);
+            g.drawString(font, Component.translatable("gui.rpperks.profile.height"), listX + 6, py + 57, C_TEXT, false);
+            g.drawString(font, profHeight + "", listX + 52, py + 57, C_TITLE, false);
+            return;
+        }
         if (tab == Tab.SKILLS) {
             renderSkills(g, data, mouseX, mouseY);
             return;
@@ -613,6 +709,12 @@ public class PerkScreen extends Screen {
             g.drawString(font, Component.translatable("gui.rpperks.skills.max"), x, y, C_GOOD, false);
             y += 12;
         }
+        if (v != null && v.length > 4 && lvl < 10) {
+            float speed = v[4];
+            int color = speed > 1.001f ? C_GOOD : speed < 0.999f ? C_BAD : C_DIM;
+            g.drawString(font, Component.translatable("gui.rpperks.skills.speed", String.format(java.util.Locale.ROOT, "%.2f", speed)), x, y, color, false);
+            y += 12;
+        }
         y += 4;
         for (FormattedCharSequence line : font.split(Component.translatable(s.descKey()), w)) {
             g.drawString(font, line, x, y, C_DIM, false);
@@ -626,6 +728,20 @@ public class PerkScreen extends Screen {
         int y = infoY + 6;
         if (tab == Tab.SKILLS) {
             renderSkillInfo(g, data, x, y, w);
+            return;
+        }
+        if (tab == Tab.PROFILE) {
+            boolean locked = ownProfile().filled();
+            for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.profile.hint"), w)) {
+                g.drawString(font, line, x, y, C_DIM, false);
+                y += 10;
+            }
+            y += 6;
+            for (FormattedCharSequence line : font.split(Component.translatable(locked
+                    ? "gui.rpperks.profile.locked" : "gui.rpperks.profile.once"), w)) {
+                g.drawString(font, line, x, y, locked ? C_GOOD : C_WARN, false);
+                y += 10;
+            }
             return;
         }
 

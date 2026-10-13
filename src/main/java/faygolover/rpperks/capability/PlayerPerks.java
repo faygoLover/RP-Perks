@@ -40,8 +40,12 @@ public class PlayerPerks {
     private final Map<String, Double> skillXp = new java.util.HashMap<>();
     /** Физические перки, стартовый уровень которых уже применён (Силач → Сила 7 и т. п.). */
     private final Set<String> physiqueApplied = new java.util.HashSet<>();
-    /** Минут в сети без физической нагрузки (для потери Силы и Телосложения). */
-    private int idleMinutes;
+    /** Минут подряд, пока действует причина потери Силы и Телосложения (мало белка, голод, болезнь…). */
+    private final Map<String, Integer> decayMinutes = new java.util.HashMap<>();
+    /** Версия данных: 2 — особенности 2.0.0. */
+    private static final int DATA_VERSION = 2;
+    /** 2.0.0: сколько старых особенностей снято с возвратом очков (-1 — сообщать нечего). Не синхронизируется. */
+    private int migrationRefunded = -1;
     /** Клиент: итоговые уровни, опыт (доля) и источник по навыкам — из пакета навыков. */
     private Map<String, float[]> clientSkills = Map.of();
 
@@ -171,20 +175,15 @@ public class PlayerPerks {
         if (applied) physiqueApplied.add(perk.getId());
         else physiqueApplied.remove(perk.getId());
     }
-    public int getIdleMinutes() { return idleMinutes; }
-    public void setIdleMinutes(int minutes) { idleMinutes = minutes; }
+    public int getDecayMinutes(String cause) { return decayMinutes.getOrDefault(cause, 0); }
+    public void setDecayMinutes(String cause, int minutes) {
+        if (minutes <= 0) decayMinutes.remove(cause);
+        else decayMinutes.put(cause, minutes);
+    }
+    public int getMigrationRefunded() { return migrationRefunded; }
+    public void setMigrationRefunded(int n) { migrationRefunded = n; }
     public Map<String, float[]> getClientSkills() { return clientSkills; }
     public void setClientSkills(Map<String, float[]> skills) { clientSkills = Map.copyOf(skills); }
-
-    /**
-     * Динамический перк (Сила, Телосложение): появляется и пропадает сам, баллы не трогает (решение 08.10:
-     * Слабак может накачаться до Силача без возврата или списания очков).
-     */
-    public void setDynamicPerk(Perk perk, boolean has) {
-        if (has) perks.putIfAbsent(perk, 0);
-        else perks.remove(perk);
-        cachedStats = null;
-    }
 
     // ---------- Таймеры механик ----------
     public int getCaffeineTimer() { return caffeineTimer; }
@@ -198,6 +197,14 @@ public class PlayerPerks {
 
     public int getUnluckyCooldown() { return unluckyCooldown; }
     public void setUnluckyCooldown(int ticks) { this.unluckyCooldown = ticks; }
+
+    // ---------- Счётчики механик без сохранения (сервер) ----------
+    private int sprintSeconds;
+    private int runnerCooldown;
+    public int getSprintSeconds() { return sprintSeconds; }
+    public void setSprintSeconds(int s) { sprintSeconds = Math.max(0, s); }
+    public int getRunnerCooldown() { return runnerCooldown; }
+    public void setRunnerCooldown(int ticks) { runnerCooldown = Math.max(0, ticks); }
 
     // ---------- Кэш характеристик (только сервер, не сохраняется и не синхронизируется) ----------
     @Nullable
@@ -245,7 +252,9 @@ public class PlayerPerks {
         this.skillXp.putAll(source.skillXp);
         this.physiqueApplied.clear();
         this.physiqueApplied.addAll(source.physiqueApplied);
-        this.idleMinutes = source.idleMinutes;
+        this.decayMinutes.clear();
+        this.decayMinutes.putAll(source.decayMinutes);
+        this.migrationRefunded = source.migrationRefunded;
     }
 
     // ---------- NBT ----------
@@ -282,7 +291,11 @@ public class PlayerPerks {
         ListTag applied = new ListTag();
         for (String id : physiqueApplied) applied.add(StringTag.valueOf(id));
         nbt.put("physiqueApplied", applied);
-        nbt.putInt("idleMinutes", idleMinutes);
+        CompoundTag decay = new CompoundTag();
+        decayMinutes.forEach(decay::putInt);
+        nbt.put("decayMinutes", decay);
+        nbt.putInt("perksVersion", DATA_VERSION);
+        nbt.putInt("migrationRefunded", migrationRefunded);
     }
 
     public void loadNBT(CompoundTag nbt) {
@@ -309,15 +322,22 @@ public class PlayerPerks {
         this.physiqueApplied.clear();
         ListTag applied = nbt.getList("physiqueApplied", Tag.TAG_STRING);
         for (int i = 0; i < applied.size(); i++) physiqueApplied.add(applied.getString(i));
-        this.idleMinutes = nbt.getInt("idleMinutes");
+        this.decayMinutes.clear();
+        CompoundTag decay = nbt.getCompound("decayMinutes");
+        for (String k : decay.getAllKeys()) decayMinutes.put(k, decay.getInt(k));
+        this.migrationRefunded = nbt.contains("migrationRefunded") ? nbt.getInt("migrationRefunded") : -1;
         this.perks.clear();
+        int version = nbt.getInt("perksVersion");
 
         if (nbt.contains("perk_entries", Tag.TAG_LIST)) {
             ListTag list = nbt.getList("perk_entries", Tag.TAG_COMPOUND);
+            Map<String, Integer> raw = new java.util.LinkedHashMap<>();
             for (int i = 0; i < list.size(); i++) {
                 CompoundTag entry = list.getCompound(i);
-                Perk.fromId(entry.getString("id")).ifPresent(perk -> perks.put(perk, entry.getInt("delta")));
+                raw.put(entry.getString("id"), entry.getInt("delta"));
             }
+            if (version < 2) migrateTo2(raw);
+            else raw.forEach((id, delta) -> Perk.fromId(id).ifPresentOrElse(perk -> perks.put(perk, delta), () -> points -= delta));
         } else {
             // Сохранения старой версии: список ID без цен. Баллы тогда списывались по старым ценам,
             // поэтому и возвращать их нужно по старым — иначе баланс «уплывёт».
@@ -328,10 +348,50 @@ public class PlayerPerks {
         }
     }
 
+    /**
+     * Переход на особенности 2.0.0 (решение брата 13.10.2026): у кого старые версии особенностей — снять их и вернуть
+     * очки, пусть выберут заново. Наработанные уровни навыков сохраняются.
+     * <ul>
+     *   <li>особенности, чья суть поменялась, и исчезнувшие (Атлет, Чистюля) — сняты, очки возвращены;</li>
+     *   <li>«динамические» физические перки (без очков) — просто сняты;</li>
+     *   <li>купленный старый физический перк когда-то сдвинул Силу или Телосложение — этот сдвиг убираем (новый
+     *       возьмут заново);</li>
+     *   <li>ненаработанные Сила и Телосложение были 4 — оставляем 4, хотя новый обычный уровень 3.</li>
+     * </ul>
+     */
+    private void migrateTo2(Map<String, Integer> raw) {
+        Set<String> revoke = Set.of("survivor", "tough", "fragile", "enduring", "weakling", "strongman", "wimp", "smoker");
+        // Сдвиг старта от купленного старого перка (старый обычный уровень — 4).
+        Map<String, int[]> oldStart = Map.of("wimp", new int[]{0, -3}, "strongman", new int[]{0, 3},
+                "weakling", new int[]{1, -3}, "enduring", new int[]{1, 3}, "athlete", new int[]{1, 5});
+        int refunded = 0;
+        for (var e : raw.entrySet()) {
+            String id = e.getKey();
+            int delta = e.getValue();
+            int[] shift = oldStart.get(id);
+            if (shift != null && delta != 0 && physiqueApplied.contains(id)) {
+                String skill = shift[0] == 0 ? "strength" : "fitness";
+                int t = getTrained(skill);
+                if (t >= 0) setTrained(skill, t - shift[1]);
+            }
+            var perk = Perk.fromId(id);
+            if (delta == 0 && perk.isPresent() && perk.get().getCategory() != Perk.Category.SERVICE && shift != null) continue;
+            if (perk.isEmpty() || revoke.contains(id)) {
+                points -= delta;
+                if (delta != 0) refunded++;
+                continue;
+            }
+            perks.put(perk.get(), delta);
+        }
+        for (String skill : new String[]{"strength", "fitness"}) if (getTrained(skill) < 0) setTrained(skill, 4);
+        physiqueApplied.clear();
+        migrationRefunded = refunded;
+    }
+
     /** Цены из версии мода до переноса в конфиг. */
     private static int legacyDelta(Perk perk) {
         int cost = switch (perk) {
-            case SURVIVOR, ATHLETE -> 10;
+            case SURVIVOR -> 10;
             case TOUGH, STRONGMAN, TOURIST, ORGANIZED, LUCKY -> 8;
             case ENDURING, BRAVE, NERD_RAGE, SAILOR, TAILOR, FARMER, COOK -> 6;
             case SOLDIER, BUILDER, MELEE_FIGHTER, FRAGILE -> 7;

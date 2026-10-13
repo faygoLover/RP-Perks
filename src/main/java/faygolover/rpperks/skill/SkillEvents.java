@@ -25,7 +25,8 @@ import java.util.UUID;
 
 /**
  * События навыков (сервер): ближний бой — любое оружие и голые руки (урон и скорость ударов от уровня, урон
- * от Силы, опыт за удар), Пацифист — урон по людям, раз в минуту — потеря Силы и Телосложения без нагрузки.
+ * от Силы, Силача и Слабака, опыт за удар), Пацифист — урон по людям, раз в минуту — потеря Силы и Телосложения
+ * от плохого питания, болезни и веса вне нормы.
  */
 @Mod.EventBusSubscriber(modid = Rpperks.MODID)
 public final class SkillEvents {
@@ -72,9 +73,8 @@ public final class SkillEvents {
         float amount = e.getAmount();
         boolean melee = e.getSource().getDirectEntity() == p;
         if (melee) {
-            int str = SkillService.level(d, SkillDef.STRENGTH);
             amount *= (float) (Config.table(Config.T_MELEE_DAMAGE, SkillService.level(d, SkillDef.MELEE))
-                    * Math.max(0.5, 1.0 + (str - 4) * Config.get(Config.STRENGTH_MELEE_PER_LEVEL)));
+                    * PhysicalEffects.meleeDamage(d));
             if (!(target instanceof ArmorStand) && amount > 0)
                 SkillService.practice(p, SkillDef.MELEE, Config.get(Config.XP_MELEE_HIT));
         }

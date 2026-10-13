@@ -72,7 +72,13 @@ public final class PerkMechanicsHandler {
         if (player.tickCount % 10 == 0) {
             tickNerdRage(player, data);
             tickSolar(player, data);
+            tickSunSensitive(player, data);
         }
+        if (player.tickCount % 20 == 0) {
+            tickAsthma(player, data);
+            tickClumsyRunner(player, data);
+        }
+        if (data.getRunnerCooldown() > 0) data.setRunnerCooldown(data.getRunnerCooldown() - 1);
         if (data.getUnluckyCooldown() > 0) data.setUnluckyCooldown(data.getUnluckyCooldown() - 1);
     }
 
@@ -182,6 +188,53 @@ public final class PerkMechanicsHandler {
                 "RP solar stamina", Config.get(Config.SOLAR_STAMINA_REGEN_BONUS), AttributeModifier.Operation.ADDITION, inSun);
     }
 
+    private static boolean bodyMod() {
+        return faygolover.rpcore.api.RpCoreAPI.body() != null;
+    }
+
+    private static boolean inSun(ServerPlayer player) {
+        Level level = player.level();
+        return level.isDay() && !level.isRaining() && level.canSeeSky(BlockPos.containing(player.getEyePosition()));
+    }
+
+    // ---------- Чувствительность к солнцу (без RP Medicine — Слабость; с ней — головная боль у неё) ----------
+    private static void tickSunSensitive(ServerPlayer player, PlayerPerks data) {
+        if (!data.hasPerk(Perk.SUN_SENSITIVE) || bodyMod() || !inSun(player)) return;
+        player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 0, true, false, true));
+    }
+
+    // ---------- Астматик без RP Medicine: долгий бег — одышка ----------
+    private static void tickAsthma(ServerPlayer player, PlayerPerks data) {
+        if (!data.hasPerk(Perk.ASTHMATIC) || bodyMod()) return;
+        if (!player.isSprinting()) {
+            data.setSprintSeconds(data.getSprintSeconds() - 2);
+            return;
+        }
+        data.setSprintSeconds(data.getSprintSeconds() + 1);
+        if (data.getSprintSeconds() < Config.get(Config.ASTHMA_SPRINT_SECONDS)) return;
+        data.setSprintSeconds(0);
+        player.setSprinting(false);
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, Config.get(Config.ASTHMA_SLOW_SECONDS) * 20, 0, false, false, true));
+        player.displayClientMessage(Component.translatable("message.rpperks.asthma"), true);
+    }
+
+    // ---------- Неуклюжий бегун: на бегу иногда спотыкается ----------
+    private static void tickClumsyRunner(ServerPlayer player, PlayerPerks data) {
+        if (!data.hasPerk(Perk.CLUMSY_RUNNER) || !player.isSprinting() || !player.onGround() || data.getRunnerCooldown() > 0) return;
+        if (player.getRandom().nextDouble() >= Config.get(Config.CLUMSY_RUNNER_CHANCE_PERCENT) / 100.0) return;
+        data.setRunnerCooldown(Config.get(Config.CLUMSY_RUNNER_COOLDOWN_MINUTES) * 1200);
+        player.setSprinting(false);
+        // С модом тела иногда — настоящий вывих (вправляет медик); иначе — ушиб и короткое замедление.
+        var body = faygolover.rpcore.api.RpCoreAPI.body();
+        boolean sprained = body != null && body.handles(faygolover.rpcore.api.RpIds.BODY_SPRAIN)
+                && player.getRandom().nextDouble() < 0.25 && body.sprain(player);
+        if (!sprained) {
+            player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1, false, false, true));
+            if (!bodyMod()) player.hurt(player.damageSources().generic(), 1.0f);
+        }
+        player.displayClientMessage(Component.translatable(sprained ? "message.rpperks.clumsy_runner.sprain" : "message.rpperks.clumsy_runner.trip"), true);
+    }
+
     // ---------- Сухопутный: не всплывает ----------
     private static void tickLandlubber(Player player) {
         if (!player.isInWater() || player.isSpectator() || player.getAbilities().flying
@@ -248,6 +301,9 @@ public final class PerkMechanicsHandler {
                 changed = true;
             }
 
+            // Без RP Culinary: желудок и зубы — простые версии на ванильной еде.
+            if (item.isEdible() && !culinary()) foodFallbacks(player, data, item);
+
             // Анорексичка: заранее решаем, откажется ли от следующего приёма пищи
             if (item.isEdible() && data.hasPerk(Perk.ANOREXIC)) {
                 double chance = Config.get(Config.ANOREXIA_REFUSE_CHANCE_PERCENT) / 100.0;
@@ -256,6 +312,56 @@ public final class PerkMechanicsHandler {
             }
 
             if (changed) PerkEventHandler.syncToClient(player, data);
+        });
+    }
+
+    /** Без RP Culinary: Железный желудок, Слабый желудок, Плохие зубы. */
+    private static void foodFallbacks(ServerPlayer player, PlayerPerks data, ItemStack item) {
+        FoodProperties food = item.getFoodProperties(player);
+        if (data.hasPerk(Perk.IRON_STOMACH) && food != null
+                && player.getRandom().nextDouble() >= Config.get(Config.IRON_STOMACH_POISON_MULT)) {
+            for (var pair : food.getEffects()) {
+                var effect = pair.getFirst().getEffect();
+                if (effect == MobEffects.HUNGER || effect == MobEffects.POISON || effect == MobEffects.CONFUSION)
+                    player.removeEffect(effect);
+            }
+        }
+        if (data.hasPerk(Perk.WEAK_STOMACH) && player.getRandom().nextDouble() < Config.get(Config.WEAK_STOMACH_CHANCE_PERCENT) / 100.0) {
+            player.addEffect(new MobEffectInstance(MobEffects.HUNGER, 300, 0));
+            player.displayClientMessage(Component.translatable("message.rpperks.weak_stomach"), true);
+        }
+        if (data.hasPerk(Perk.BAD_TEETH) && player.getRandom().nextDouble() < Config.get(Config.BAD_TEETH_CHANCE_PERCENT) / 100.0) {
+            player.hurt(player.damageSources().generic(), 1.0f);
+            player.displayClientMessage(Component.translatable("message.rpperks.bad_teeth"), true);
+        }
+    }
+
+    // =====================================================================
+    // Здоровье без RP Medicine: Живучий и Нежный, Крепкий и Хрупкий
+    // =====================================================================
+
+    @SubscribeEvent
+    public static void onHeal(net.minecraftforge.event.entity.living.LivingHealEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (faygolover.rpcore.api.RpCoreAPI.bodyHandles(faygolover.rpcore.api.RpIds.BODY_HEALTH)) return;
+        player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
+            double mult = 1.0;
+            if (data.hasPerk(Perk.SURVIVOR)) mult *= Config.get(Config.SURVIVOR_HEAL_MULT);
+            if (data.hasPerk(Perk.DELICATE)) mult *= Config.get(Config.DELICATE_HEAL_MULT);
+            if (mult != 1.0) event.setAmount((float) (event.getAmount() * mult));
+        });
+    }
+
+    /** После навыков нападающего (HIGH): урон по самому игроку. С модом тела урон по частям меняет он. */
+    @SubscribeEvent(priority = EventPriority.LOW)
+    public static void onHurtTaken(net.minecraftforge.event.entity.living.LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (faygolover.rpcore.api.RpCoreAPI.bodyHandles(faygolover.rpcore.api.RpIds.BODY_HEALTH)) return;
+        player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
+            double mult = 1.0;
+            if (data.hasPerk(Perk.TOUGH)) mult *= Config.get(Config.TOUGH_DAMAGE_MULT);
+            if (data.hasPerk(Perk.FRAGILE)) mult *= Config.get(Config.FRAGILE_DAMAGE_MULT);
+            if (mult != 1.0) event.setAmount((float) (event.getAmount() * mult));
         });
     }
 
@@ -291,21 +397,28 @@ public final class PerkMechanicsHandler {
     // Бой
     // =====================================================================
 
-    /** Силач/Слабак: сила отбрасывания от ударов в ближнем бою (у игрока в ванили нет атрибута для этого). */
+    /**
+     * Отбрасывание от ударов в ближнем бою: Сила и Слабак того, кто бьёт (у игрока в ванили нет для этого атрибута),
+     * и Хрупкий у того, кого бьют (Крепкий — через устойчивость к отбрасыванию).
+     */
     @SubscribeEvent
     public static void onKnockback(LivingKnockBackEvent event) {
         LivingEntity target = event.getEntity();
+        float strength = event.getStrength();
         DamageSource source = target.getLastDamageSource();
-        if (source == null || !(source.getDirectEntity() instanceof ServerPlayer attacker)) return;
-        if (target.getLastHurtByMobTimestamp() != target.tickCount) return;
-
-        attacker.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
-            // Значение теперь берётся из кэша, посчитанного при последнем refreshPlayer,
-            // а не пересчитывается заново на каждый удар (это горячий путь в массовом PvP).
-            double percent = PerkEventHandler.getStatValue(data, Stat.MELEE_KNOCKBACK);
-            if (percent == 0.0) return;
-            event.setStrength((float) Math.max(0.0, event.getStrength() * (1.0 + percent / 100.0)));
-        });
+        if (source != null && source.getDirectEntity() instanceof ServerPlayer attacker
+                && target.getLastHurtByMobTimestamp() == target.tickCount) {
+            PlayerPerks data = attacker.getCapability(PlayerPerksProvider.PLAYER_PERKS).resolve().orElse(null);
+            if (data != null && !data.isAdmin()) {
+                // Значение из кэша, посчитанного при последнем refreshPlayer (горячий путь в массовом PvP).
+                double percent = PerkEventHandler.getStatValue(data, Stat.MELEE_KNOCKBACK);
+                strength *= (float) (Math.max(0.0, 1.0 + percent / 100.0) * faygolover.rpperks.skill.PhysicalEffects.meleeKnockback(data));
+            }
+        }
+        if (target instanceof Player victim && hasPerk(victim, Perk.FRAGILE)) {
+            strength *= (float) (1.0 + Config.get(Config.FRAGILE_KNOCKBACK_PERCENT) / 100.0);
+        }
+        if (strength != event.getStrength()) event.setStrength(Math.max(0f, strength));
     }
 
     // =====================================================================

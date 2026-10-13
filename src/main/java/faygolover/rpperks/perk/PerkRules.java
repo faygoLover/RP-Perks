@@ -16,6 +16,8 @@ public final class PerkRules {
 
     /** Может ли игрок видеть перк в окне. */
     public static boolean isVisible(Perk perk, boolean canSeeHidden) {
+        // Без своего мода особенность не имеет смысла — её не видит никто, даже администрация.
+        if (!perk.isAvailable()) return false;
         return canSeeHidden || (!Config.isHidden(perk) && perk.getCategory() != Perk.Category.SERVICE);
     }
 
@@ -24,6 +26,7 @@ public final class PerkRules {
         if (!Config.get(Config.PLAYERS_CAN_SELECT)) return reason("selection_disabled");
         if (data.isSelectionLocked()) return reason("selection_locked");
         if (data.owns(perk)) return reason("owned");
+        if (!perk.isAvailable()) return reason("mod_missing");
         if (perk.getCategory() == Perk.Category.SERVICE || (Config.isHidden(perk) && !canSeeHidden)) {
             return reason("admin_only");
         }

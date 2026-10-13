@@ -64,6 +64,12 @@ public final class Config {
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> CAFFEINE_ITEMS;
     public static final ForgeConfigSpec.DoubleValue CLUMSY_DROP_CHANCE_PERCENT;
     public static final ForgeConfigSpec.DoubleValue LANDLUBBER_SINK_SPEED;
+    public static final ForgeConfigSpec.DoubleValue STRONGMAN_MELEE_PERCENT, WIMP_MELEE_PERCENT;
+    public static final ForgeConfigSpec.DoubleValue SURVIVOR_HEAL_MULT, DELICATE_HEAL_MULT, TOUGH_DAMAGE_MULT, FRAGILE_DAMAGE_MULT, FRAGILE_KNOCKBACK_PERCENT;
+    public static final ForgeConfigSpec.DoubleValue IRON_STOMACH_POISON_MULT, WEAK_STOMACH_CHANCE_PERCENT, BAD_TEETH_CHANCE_PERCENT;
+    public static final ForgeConfigSpec.IntValue ASTHMA_SPRINT_SECONDS, ASTHMA_SLOW_SECONDS;
+    public static final ForgeConfigSpec.DoubleValue CLUMSY_RUNNER_CHANCE_PERCENT;
+    public static final ForgeConfigSpec.IntValue CLUMSY_RUNNER_COOLDOWN_MINUTES;
 
     public static final ForgeConfigSpec.IntValue ADMIN_INVENTORY_SLOTS;
 
@@ -81,8 +87,17 @@ public final class Config {
     public static final ForgeConfigSpec.IntValue PHYSICAL_START;
     public static final ForgeConfigSpec.DoubleValue PHYSICAL_XP_COST;
     public static final ForgeConfigSpec.BooleanValue PHYSICAL_DECAY_ENABLED;
-    public static final ForgeConfigSpec.DoubleValue PHYSICAL_DECAY_PER_MINUTE;
-    public static final ForgeConfigSpec.IntValue PHYSICAL_IDLE_MINUTES;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends Double>> TALENT_MENTAL, TALENT_PHYSICAL;
+    public static final ForgeConfigSpec.BooleanValue PHYSICAL_AGE_LEARNING;
+    public static final ForgeConfigSpec.DoubleValue LOW_PROTEIN_PHYSICAL_XP;
+    public static final ForgeConfigSpec.DoubleValue FAST_LEARNER_XP, SLOW_LEARNER_XP, GYM_LOVER_XP_MULT;
+    public static final ForgeConfigSpec.DoubleValue STRENGTH_ATTACK_SPEED_PER_LEVEL, STRENGTH_KNOCKBACK_PER_LEVEL;
+    public static final ForgeConfigSpec.DoubleValue FITNESS_STAMINA_PER_LEVEL, FITNESS_MOVE_COST_PER_LEVEL, FITNESS_SPEED_PER_LEVEL;
+    public static final ForgeConfigSpec.IntValue FITNESS_STEP_LEVEL;
+    public static final ForgeConfigSpec.DoubleValue DECAY_PER_CAUSE, DECAY_MAX, DECAY_ILL_CONDITION, CAP_DRIFT, OBESE_SPEED_PERCENT;
+    public static final ForgeConfigSpec.IntValue DECAY_LOW_PROTEIN_MINUTES, DECAY_STARVING_MINUTES, DECAY_LOW_CARBS_MINUTES,
+            DECAY_DEHYDRATED_MINUTES, DECAY_ILL_MINUTES;
+    public static final ForgeConfigSpec.IntValue CAP_EXHAUSTED, CAP_UNDER, CAP_OVER, CAP_OBESE;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> PERK_SKILLS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends Double>> T_SPREAD, T_RECOIL, T_RELOAD, T_AIM, T_MELEE_DAMAGE, T_MELEE_SPEED, T_EXPLOSIVE;
 
@@ -186,60 +201,81 @@ public final class Config {
         // =====================================================================
         B.comment(" ОСНОВНЫЕ ПЕРКИ (положительные)").push("main_perks");
 
-        beginPerk(Perk.SURVIVOR, "Повышенное на 2.5 сердца ХП. С RP Medicine вместо ХП: стойкость к шоку и кровопотере, заживление быстрее (числа — в конфиге Medicine)");
+        beginPerk(Perk.ATHLETIC, "Атлетичный: Телосложение +3 к старту (6), +10 % запаса выносливости. Растёт на 20 % быстрее (талант от старта)");
+        bonus(Perk.ATHLETIC, Stat.STAMINA_MAX, 100.0);
+        B.pop();
+        beginPerk(Perk.FIT, "В форме: Телосложение +2 к старту (5)");
+        B.pop();
+        beginPerk(Perk.STRONGMAN, "Силач: Сила +3 к старту (6), +10 % урона в ближнем бою");
+        STRONGMAN_MELEE_PERCENT = B.comment(" Прибавка к урону в ближнем бою, % (навсегда, поверх уровня Силы)")
+                .defineInRange("melee_damage_percent", 10.0, 0.0, 500.0);
+        B.pop();
+        beginPerk(Perk.STRONG, "Сильный: Сила +2 к старту (5)");
+        B.pop();
+
+        beginPerk(Perk.ENDURING, "Выносливый: быстрее восстанавливает выносливость, бег и плавание дешевле (RP Stamina)");
+        bonus(Perk.ENDURING, Stat.STAMINA_REGEN, 0.2);
+        bonus(Perk.ENDURING, Stat.STAMINA_MOVE_COST, -0.1);
+        bonus(Perk.ENDURING, Stat.STAMINA_SWIM_COST, -0.1);
+        B.pop();
+        rpPerk(Perk.SECOND_WIND, "Второе дыхание: раз в час, когда выносливость упала до нуля, сразу +50 % (механика — RP Stamina)");
+        rpPerk(Perk.QUICK_REST, "Быстрый отдых: сидя восстанавливается вдвое быстрее (механика — RP Stamina)");
+        beginPerk(Perk.GYM_LOVER, "Любитель спорта: с RP Stamina Sports тренировки полезнее; без него Сила и Телосложение от обычной нагрузки растут быстрее");
+        GYM_LOVER_XP_MULT = B.comment(" Без Sports-аддона: множитель опыта Силы и Телосложения от обычной нагрузки")
+                .defineInRange("xp_multiplier_without_sports", 1.25, 0.0, 10.0);
+        B.pop();
+
+        beginPerk(Perk.SURVIVOR, "Живучий. С RP Medicine: заживление +20 %, кровопотеря −20 %, боль −20 % (числа — в конфиге Medicine).",
+                "Без Medicine: +2,5 сердца и быстрее восстанавливает здоровье");
         bonus(Perk.SURVIVOR, Stat.MAX_HEALTH, 5.0);
+        SURVIVOR_HEAL_MULT = B.comment(" Без Medicine: множитель восстановления здоровья").defineInRange("heal_multiplier", 1.2, 0.0, 10.0);
         B.pop();
-
-        beginPerk(Perk.ATHLETE, "Повышенная скорость передвижения, подъём на 2 блока, меньше тратит выносливости");
-        bonus(Perk.ATHLETE, Stat.MOVEMENT_SPEED, 25.0);
-        bonus(Perk.ATHLETE, Stat.STEP_HEIGHT, 0.5);
-        bonus(Perk.ATHLETE, Stat.STAMINA_COST, -0.15);
-        B.pop();
-
-        beginPerk(Perk.TOUGH, "+1.5 щита брони, +1.5 щита твёрдости, устойчивость к отбрасыванию");
-        bonus(Perk.TOUGH, Stat.ARMOR, 3.0);
-        bonus(Perk.TOUGH, Stat.ARMOR_TOUGHNESS, 3.0);
+        beginPerk(Perk.TOUGH, "Крепкий: −20 % урона по телу (с Medicine — по частям тела), +1 твёрдость брони, меньше отбрасывает");
+        bonus(Perk.TOUGH, Stat.ARMOR_TOUGHNESS, 1.0);
         bonus(Perk.TOUGH, Stat.KNOCKBACK_RESISTANCE, 0.2);
+        TOUGH_DAMAGE_MULT = B.comment(" Без Medicine: множитель получаемого урона").defineInRange("damage_multiplier", 0.8, 0.0, 10.0);
         B.pop();
 
-        beginPerk(Perk.STRONGMAN, "Повышенный урон, скорость ударов и отбрасывание в ближнем бою. Пара к Слабаку");
-        bonus(Perk.STRONGMAN, Stat.ATTACK_DAMAGE, 0.2);
-        bonus(Perk.STRONGMAN, Stat.ATTACK_SPEED, 0.5);
-        bonus(Perk.STRONGMAN, Stat.MELEE_KNOCKBACK, 30.0);
+        beginPerk(Perk.IRON_STOMACH, "Железный желудок: отравиться едой вдвое реже. Без RP Culinary — ванильное отравление (сырая курица, гнилая плоть) реже");
+        IRON_STOMACH_POISON_MULT = B.comment(" Без Culinary: шанс, что ванильное отравление от еды подействует").defineInRange("vanilla_poison_chance", 0.5, 0.0, 1.0);
+        B.pop();
+        rpPerk(Perk.LIGHT_EATER, "Малоежка: голод медленнее, желудок меньше (механика — RP Culinary)");
+        rpPerk(Perk.LOW_THIRST, "Мало пьёт: вода тратится медленнее (механика — RP Culinary)");
+        rpPerk(Perk.FAST_METABOLISM, "Быстрый обмен веществ: тратит на 15 % больше, легко держит вес (нужен RP Culinary)");
+        rpPerk(Perk.GOURMET, "Гурман: однообразная еда надоедает быстрее, хорошая и вкусная радует сильнее (нужен RP Culinary)");
+
+        beginPerk(Perk.FLEET, "Быстроногий: +10 % скорости");
+        bonus(Perk.FLEET, Stat.MOVEMENT_SPEED, 10.0);
+        B.pop();
+        beginPerk(Perk.LIGHT_TRAVEL, "Путешествие налегке: быстрее в лёгкой броне");
+        LIGHT_TRAVEL_MAX_ARMOR = B.comment(" Бонус действует, пока очков брони не больше N")
+                .defineInRange("max_armor", 6, 0, 30);
+        LIGHT_TRAVEL_SPEED_PERCENT = B.comment(" Прибавка к скорости, % от базы")
+                .defineInRange("movement_speed_percent", 10.0, 0.0, 500.0);
+        B.pop();
+        beginPerk(Perk.AGILE, "Ловкий: дальность взаимодействия +1; с RP Medicine и Sports — зоны мини-игр шире. Пара к Плохой координации");
+        bonus(Perk.AGILE, Stat.BLOCK_REACH, 1.0);
+        bonus(Perk.AGILE, Stat.ENTITY_REACH, 1.0);
         B.pop();
 
-        beginPerk(Perk.TOURIST, "Устойчивость к температуре среды (LSO). С RP Medicine — крепкий иммунитет");
-        bonus(Perk.TOURIST, Stat.THERMAL_RESISTANCE, 2.0);
+        beginPerk(Perk.FAST_LEARNER, "Быстрообучаемый: больше опыта всех навыков, кроме Силы и Телосложения");
+        FAST_LEARNER_XP = B.comment(" Множитель опыта").defineInRange("xp_multiplier", 1.2, 0.0, 10.0);
         B.pop();
+        rpPerk(Perk.QUICK_WORKER, "Расторопный: медицина и готовка на 20 % быстрее (механика — RP Medicine, RP Culinary)");
 
-        beginPerk(Perk.ORGANIZED, "+3 слота инвентаря");
-        bonus(Perk.ORGANIZED, Stat.INVENTORY_SLOTS, 3.0);
-        B.pop();
-
-        beginPerk(Perk.LUCKY, "Повышенная удача. Пара к Неудачливому");
-        bonus(Perk.LUCKY, Stat.LUCK, 2.0);
-        B.pop();
-
-        beginPerk(Perk.ENDURING, "Повышенная выносливость: больше максимум и быстрее восстановление");
-        bonus(Perk.ENDURING, Stat.STAMINA_MAX, 250.0);
-        bonus(Perk.ENDURING, Stat.STAMINA_REGEN, 0.25);
-        B.pop();
-
-        rpPerk(Perk.BRAVE, "Медленнее поддаётся панике (РП)");
-        rpPerk(Perk.STRONG_WILLED, "Устойчив к когнитивному воздействию (РП). Пара к Внушаемому");
-
+        rpPerk(Perk.BRAVE, "Храбрый: медленнее поддаётся панике (РП; позже — психика)");
+        rpPerk(Perk.STRONG_WILLED, "Волевой: устойчив к когнитивному воздействию (РП; позже — психика)");
         beginPerk(Perk.NERD_RAGE, "При низком здоровье получает Силу и Сопротивление");
         NERD_RAGE_HEALTH_PERCENT = B.comment(" Порог срабатывания: здоровье ниже N% от максимума")
                 .defineInRange("health_threshold_percent", 20.0, 1.0, 100.0);
         NERD_RAGE_EFFECT_LEVEL = B.comment(" Уровень эффектов (1 = I, 2 = II ...)")
                 .defineInRange("effect_level", 2, 1, 10);
         B.pop();
+        rpPerk(Perk.ALCOHOLIC, "Закалённый алкоголик: легко переносит алкоголь (РП)");
 
-        beginPerk(Perk.AGILE, "Увеличенная дальность взаимодействия с блоками и атак. Пара к Плохой координации");
-        bonus(Perk.AGILE, Stat.BLOCK_REACH, 1.0);
-        bonus(Perk.AGILE, Stat.ENTITY_REACH, 1.0);
+        beginPerk(Perk.TOURIST, "Турист: устойчивость к температуре среды (LSO). С RP Medicine — иммунитет крепче");
+        bonus(Perk.TOURIST, Stat.THERMAL_RESISTANCE, 2.0);
         B.pop();
-
         beginPerk(Perk.SOLAR_POWERED, "Днём под открытым небом (без дождя): Скорость и быстрое восстановление выносливости");
         SOLAR_SPEED_LEVEL = B.comment(" Уровень эффекта Скорости (0 = не давать)")
                 .defineInRange("speed_effect_level", 1, 0, 10);
@@ -247,19 +283,12 @@ public final class Config {
                         " Прибавка к множителю восстановления выносливости на солнце (0.5 = на 50% быстрее)")
                 .defineInRange("stamina_regen_bonus", 0.5, 0.0, 10.0);
         B.pop();
-
-        beginPerk(Perk.LIGHT_TRAVEL, "Быстрее передвигается в лёгкой броне");
-        LIGHT_TRAVEL_MAX_ARMOR = B.comment(" Бонус действует, пока очков брони не больше N")
-                .defineInRange("max_armor", 6, 0, 30);
-        LIGHT_TRAVEL_SPEED_PERCENT = B.comment(" Прибавка к скорости, % от базы")
-                .defineInRange("movement_speed_percent", 10.0, 0.0, 500.0);
+        beginPerk(Perk.LUCKY, "Повышенная удача. Пара к Неудачливому");
+        bonus(Perk.LUCKY, Stat.LUCK, 2.0);
         B.pop();
-
-        rpPerk(Perk.ALCOHOLIC, "Легко переносит алкоголь (РП)");
-        rpPerk(Perk.SMOKER, "Курение улучшает психическое состояние, без него — ухудшается (РП)");
-        rpPerk(Perk.CLEAN, "Чистюля: почти не травится сырым мясом (нужен RP Culinary; числа — в его конфиге)");
-        rpPerk(Perk.GOURMET, "Гурман: однообразная еда надоедает быстрее, хорошая и вкусная радует сильнее (нужен RP Culinary)");
-        rpPerk(Perk.FAST_METABOLISM, "Быстрый обмен веществ: тратит на 15 % больше, легко держит вес (нужен RP Culinary)");
+        beginPerk(Perk.ORGANIZED, "+3 слота инвентаря");
+        bonus(Perk.ORGANIZED, Stat.INVENTORY_SLOTS, 3.0);
+        B.pop();
         B.pop();
 
         // =====================================================================
@@ -268,42 +297,37 @@ public final class Config {
         B.pop();
         beginPerk(Perk.MEDIC, "Медицина 8: сложные манипуляции, препараты и оборудование (RP Medicine)");
         B.pop();
-
         beginPerk(Perk.MELEE_FIGHTER, "Ближний бой 5 (любое оружие ближнего боя и голые руки), меньше устаёт в бою");
         bonus(Perk.MELEE_FIGHTER, Stat.STAMINA_MELEE_COST, -0.2);
         B.pop();
-
         beginPerk(Perk.BUILDER, "Непрофессиональные инженерно-строительные работы (РП). Добыча блоков меньше утомляет");
         bonus(Perk.BUILDER, Stat.STAMINA_MINE_COST, -0.2);
         B.pop();
-
         beginPerk(Perk.GUNNER, "Короткоствольное оружие 4, длинноствольное 1");
         B.pop();
         beginPerk(Perk.EXPLOSIVES, "Взрывчатка 5, тяжёлое оружие 1; создание и обезвреживание взрывных устройств (РП)");
         B.pop();
         rpPerk(Perk.TECHNICIAN, "Работа со сложным оборудованием и техникой, ограниченный ремонт (РП)");
         rpPerk(Perk.HACKER, "Взлом замков, электронных систем, дверей и терминалов (РП)");
-
+        rpPerk(Perk.COOK, "Кулинария 5: хорошие блюда, сложные рецепты (уровень — skill_system.perk_skills; с RP Culinary — качество блюд)");
+        beginPerk(Perk.BASIC_TRAINING, "Курс молодого бойца: короткоствольное и длинноствольное 2, ближний бой 1, медицина 1");
+        B.pop();
         beginPerk(Perk.SAILOR, "Рыбалка, повышенная скорость плавания, плавание меньше утомляет");
         bonus(Perk.SAILOR, Stat.SWIM_SPEED, 0.4);
         bonus(Perk.SAILOR, Stat.STAMINA_SWIM_COST, -0.4);
         B.pop();
-
         rpPerk(Perk.TAILOR, "Шитьё и ремонт одежды (РП)");
         rpPerk(Perk.FARMER, "Фермерство, сбор и различение диких растений (РП)");
-        rpPerk(Perk.COOK, "Кулинария 5: хорошие блюда, сложные рецепты (уровень — skill_system.perk_skills; с RP Culinary — качество блюд)");
-        rpPerk(Perk.DIETITIAN, "Диетолог: точный состав еды и советы «что съесть» (нужен RP Culinary)");
-        rpPerk(Perk.FIELD_COOK, "Полевой повар: на костре и в коптильне готовит как на 2 уровня Кулинарии выше (нужен RP Culinary)");
         rpPerk(Perk.DRIVER, "Минимальное управление наземным транспортом (РП)");
         rpPerk(Perk.PILOT, "Минимальное управление воздушным транспортом (РП)");
         beginPerk(Perk.FIRST_AID, "Медицина 3: полная первая помощь, базовое обращение с медицинскими вещами");
         B.pop();
-        beginPerk(Perk.BASIC_TRAINING, "Курс молодого бойца: короткоствольное и длинноствольное 2, ближний бой 1, медицина 1");
-        B.pop();
+        rpPerk(Perk.DIETITIAN, "Диетолог: точный состав еды и советы «что съесть» (нужен RP Culinary)");
+        rpPerk(Perk.FIELD_COOK, "Полевой повар: на костре и в коптильне готовит как на 2 уровня Кулинарии выше (нужен RP Culinary)");
         B.pop();
 
         // =====================================================================
-        B.comment(" НАВЫКИ: уровни 0–10, рост от практики, влияние на оружие и ближний бой").push("skill_system");
+        B.comment(" НАВЫКИ: уровни 0–10, рост от практики, влияние на оружие, ближний бой, Силу и Телосложение").push("skill_system");
         SKILL_GROWTH = B.comment(" Навыки растут от практики (оружие, ближний бой, медицина, нагрузка). false — только перки и ГМ.")
                 .define("growth_enabled", true);
         XP_MULTIPLIER = B.comment(" Общий множитель опыта (2.0 — вдвое быстрее)").defineInRange("xp_multiplier", 1.0, 0.0, 100.0);
@@ -316,16 +340,22 @@ public final class Config {
         XP_PER_100_STAMINA = B.comment(" Опыт Силы/Телосложения за каждые 100 потраченной выносливости (нужен RP Stamina)")
                 .defineInRange("xp_per_100_stamina", 1.0, 0.0, 1000.0);
         XP_MEDICINE = B.comment(" Множитель опыта Медицины (сколько даёт лечение — решает RP Medicine)").defineInRange("xp_medicine", 1.0, 0.0, 100.0);
-        PHYSICAL_START = B.comment(" Сила и Телосложение у игрока без физических перков").defineInRange("physical_start_level", 4, 0, 10);
+        PHYSICAL_START = B.comment(" Сила и Телосложение у игрока без физических особенностей (обычный человек).",
+                        " Особенности сдвигают старт: Хиляк/Слабак −3, Не в форме/Слабый −2, В форме/Сильный +2, Атлетичный/Силач +3")
+                .defineInRange("physical_start_level", 3, 0, 10);
         PHYSICAL_XP_COST = B.comment(" Сила и Телосложение: во сколько раз больше опыта нужно на уровень, чем другим навыкам")
                 .defineInRange("physical_xp_cost", 10.0, 0.1, 1000.0);
-        PHYSICAL_DECAY_ENABLED = B.comment(" Сила и Телосложение без нагрузки падают (false — не падают никогда)")
-                .define("physical_decay_enabled", true);
-        PHYSICAL_DECAY_PER_MINUTE = B.comment(" Сила и Телосложение без нагрузки: потеря опыта за минуту в сети").defineInRange("physical_decay_per_minute", 1.0, 0.0, 1000.0);
-        PHYSICAL_IDLE_MINUTES = B.comment(" Без нагрузки столько минут в сети — начинается потеря").defineInRange("physical_idle_minutes", 30, 0, 100000);
+        TALENT_MENTAL = table("talent_mental", " Талант: скорость роста умственных и боевых навыков по СТАРТОВОМУ уровню 0, 1, 2, 3+ (старт — от умений)",
+                0.7, 0.8, 1.0, 1.2);
+        TALENT_PHYSICAL = table("talent_physical", " Талант: скорость роста Силы и Телосложения по стартовому уровню 0..6+ (старт — от особенностей)",
+                0.8, 0.9, 0.95, 1.0, 1.05, 1.1, 1.2);
+        PHYSICAL_AGE_LEARNING = B.comment(" Возраст из анкеты тела (RP Core) влияет на рост Силы и Телосложения: 16–17 ×1,1 … 61+ ×0,6")
+                .define("age_affects_physical", true);
+        LOW_PROTEIN_PHYSICAL_XP = B.comment(" С RP Culinary: мало белка (запас ниже 20) — множитель опыта Силы и Телосложения")
+                .defineInRange("low_protein_physical_xp", 0.5, 0.0, 1.0);
         PERK_SKILLS = B.comment(" Уровни навыков от перков: \"перк = навык:уровень, ...\". Перк даёт МИНИМУМ уровня; от нескольких перков берётся наибольший.",
                         " Навыки: medicine, cooking, short_arms, long_arms, heavy_arms, explosives, melee.",
-                        " Сила и Телосложение от перков не задаются: Силач/Слабак, Атлет/Выносливый/Задохлик — динамические (зависят от уровня).")
+                        " Сила и Телосложение задают физические особенности (physical_start_level и сдвиги), не эта таблица.")
                 .defineListAllowEmpty(List.of("perk_skills"), List.of(
                         "first_aid = medicine:3",
                         "medic = medicine:8",
@@ -343,10 +373,22 @@ public final class Config {
         T_MELEE_DAMAGE = table("melee_damage", " Урон в ближнем бою (любое оружие и кулаки) по уровню 0..10", 0.7, 0.76, 0.82, 0.88, 0.94, 1.0, 1.08, 1.16, 1.24, 1.32, 1.4);
         T_MELEE_SPEED = table("melee_speed", " Скорость ударов по уровню 0..10", 0.8, 0.84, 0.88, 0.92, 0.96, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25);
         T_EXPLOSIVE = table("explosive_power", " Сила и радиус взрывов своего оружия по уровню «Взрывчатки» 0..10", 0.6, 0.68, 0.76, 0.84, 0.92, 1.0, 1.06, 1.12, 1.18, 1.24, 1.3);
-        STRENGTH_MELEE_PER_LEVEL = B.comment(" Сила: прибавка к урону в ближнем бою за уровень выше 4 (и убавка ниже)")
-                .defineInRange("strength_melee_per_level", 0.03, 0.0, 1.0);
-        STRENGTH_HEAVY_RECOIL_PER_LEVEL = B.comment(" Сила: насколько меньше отдача тяжёлого оружия за уровень выше 4")
+        STRENGTH_MELEE_PER_LEVEL = B.comment(" Сила: прибавка к урону в ближнем бою за уровень выше обычного (physical_start_level) и убавка ниже")
+                .defineInRange("strength_melee_per_level", 0.05, 0.0, 1.0);
+        STRENGTH_ATTACK_SPEED_PER_LEVEL = B.comment(" Сила: прибавка к скорости ударов за уровень выше обычного")
+                .defineInRange("strength_attack_speed_per_level", 0.03, 0.0, 1.0);
+        STRENGTH_KNOCKBACK_PER_LEVEL = B.comment(" Сила: прибавка к отбрасыванию от ударов за уровень выше обычного")
+                .defineInRange("strength_knockback_per_level", 0.08, 0.0, 1.0);
+        STRENGTH_HEAVY_RECOIL_PER_LEVEL = B.comment(" Сила: насколько меньше отдача тяжёлого оружия за уровень выше обычного")
                 .defineInRange("strength_heavy_recoil_per_level", 0.03, 0.0, 1.0);
+        FITNESS_STAMINA_PER_LEVEL = B.comment(" Телосложение: прибавка к запасу И скорости восстановления выносливости за уровень выше обычного (RP Stamina)")
+                .defineInRange("fitness_stamina_per_level", 0.06, 0.0, 1.0);
+        FITNESS_MOVE_COST_PER_LEVEL = B.comment(" Телосложение: насколько меньше трата выносливости на бег, прыжки, лестницы за уровень выше обычного")
+                .defineInRange("fitness_move_cost_per_level", 0.025, 0.0, 1.0);
+        FITNESS_SPEED_PER_LEVEL = B.comment(" Телосложение: прибавка к скорости передвижения за уровень выше обычного")
+                .defineInRange("fitness_speed_per_level", 0.015, 0.0, 1.0);
+        FITNESS_STEP_LEVEL = B.comment(" Телосложение: с этого уровня шагает на блок без прыжка (0 — никогда)")
+                .defineInRange("fitness_step_level", 9, 0, 10);
         CLUMSY_WEAPON_PENALTY = B.comment(" Плохая координация: минус к уровням огнестрельных навыков").defineInRange("clumsy_weapon_penalty", 1, 0, 10);
         PACIFIST_COMBAT_CAP = B.comment(" Пацифист: боевые навыки не выше").defineInRange("pacifist_combat_cap", 1, 0, 10);
         PACIFIST_HUMAN_DAMAGE = B.comment(" Пацифист: множитель урона по людям (игроки и сущности из тега rpperks:humans)")
@@ -356,18 +398,70 @@ public final class Config {
         B.pop();
 
         // =====================================================================
+        B.comment(" ПОТЕРЯ СИЛЫ И ТЕЛОСЛОЖЕНИЯ: не от простоя, а от плохого питания (RP Culinary), долгой болезни (RP Medicine)",
+                        " и веса вне нормы (потолок уровня). Можно упасть и ниже стартового уровня: тело правда слабеет.")
+                .push("physical_decay");
+        PHYSICAL_DECAY_ENABLED = B.comment(" Сила и Телосложение могут падать (false — не падают никогда)")
+                .define("physical_decay_enabled", true);
+        DECAY_PER_CAUSE = B.comment(" Потеря опыта за минуту в сети на каждую причину").defineInRange("xp_per_minute_per_cause", 10.0, 0.0, 10000.0);
+        DECAY_MAX = B.comment(" Не больше столько опыта за минуту, сколько бы причин ни было").defineInRange("xp_per_minute_max", 20.0, 0.0, 10000.0);
+        DECAY_LOW_PROTEIN_MINUTES = B.comment(" Мало белка (ниже 20) дольше N минут в сети — падает Сила").defineInRange("low_protein_minutes", 360, 1, 100000);
+        DECAY_STARVING_MINUTES = B.comment(" Голодает (сытость 0) дольше N минут — падают Сила и Телосложение").defineInRange("starving_minutes", 120, 1, 100000);
+        DECAY_LOW_CARBS_MINUTES = B.comment(" Мало углеводов дольше N минут — падает Телосложение").defineInRange("low_carbs_minutes", 360, 1, 100000);
+        DECAY_DEHYDRATED_MINUTES = B.comment(" Обезвожен дольше N минут — падает Телосложение").defineInRange("dehydrated_minutes", 60, 1, 100000);
+        DECAY_ILL_MINUTES = B.comment(" Тяжело болен (RP Medicine) дольше N минут — падают Сила и Телосложение").defineInRange("ill_minutes", 120, 1, 100000);
+        DECAY_ILL_CONDITION = B.comment(" «Тяжело болен» — общее состояние тела ниже этой доли (0–1)").defineInRange("ill_condition", 0.5, 0.0, 1.0);
+        CAP_DRIFT = B.comment(" Вес вне нормы: навык выше потолка сползает к нему, опыта за минуту").defineInRange("cap_drift_per_minute", 5.0, 0.0, 10000.0);
+        CAP_EXHAUSTED = B.comment(" Потолок Силы и Телосложения при истощении").defineInRange("cap_exhausted", 2, 0, 10);
+        CAP_UNDER = B.comment(" Потолок Силы и Телосложения ниже нормы веса").defineInRange("cap_under", 5, 0, 10);
+        CAP_OVER = B.comment(" Потолок Телосложения выше нормы веса").defineInRange("cap_over", 6, 0, 10);
+        CAP_OBESE = B.comment(" Потолок Телосложения при ожирении").defineInRange("cap_obese", 4, 0, 10);
+        OBESE_SPEED_PERCENT = B.comment(" Жирный без RP Culinary (вес никто не ведёт): штраф к скорости, %").defineInRange("obese_speed_penalty_percent", 10.0, 0.0, 100.0);
+        B.pop();
+
+        // =====================================================================
         B.comment(" НЕГАТИВНЫЕ ПЕРКИ (cost — сколько баллов получает игрок)").push("negative_perks");
 
-        beginPerk(Perk.FRAGILE, "Пониженное на 2.5 сердца ХП. С RP Medicine вместо ХП: чаще переломы, заживление медленнее (числа — в конфиге Medicine)");
-        bonus(Perk.FRAGILE, Stat.MAX_HEALTH, -5.0);
+        beginPerk(Perk.PUNY, "Хиляк: Телосложение −3 к старту (0), −10 % запаса выносливости. Растёт на 20 % медленнее (талант от старта)");
+        bonus(Perk.PUNY, Stat.STAMINA_MAX, -100.0);
+        B.pop();
+        beginPerk(Perk.OUT_OF_SHAPE, "Не в форме: Телосложение −2 к старту (1)");
+        B.pop();
+        beginPerk(Perk.WIMP, "Слабак: Сила −3 к старту (0), −10 % урона и отбрасывания в ближнем бою");
+        WIMP_MELEE_PERCENT = B.comment(" Убавка урона и отбрасывания в ближнем бою, % (навсегда)")
+                .defineInRange("melee_penalty_percent", 10.0, 0.0, 100.0);
+        B.pop();
+        beginPerk(Perk.WEAK, "Слабый: Сила −2 к старту (1)");
         B.pop();
 
-        beginPerk(Perk.DISORGANIZED, "-3 слота инвентаря");
-        bonus(Perk.DISORGANIZED, Stat.INVENTORY_SLOTS, -3.0);
+        rpPerk(Perk.EMACIATED, "Дистрофик: старт ниже нормы веса (RP Culinary). Сила и Телосложение не выше 5");
+        rpPerk(Perk.OVERWEIGHT, "Избыточный вес: старт выше нормы (RP Culinary). Телосложение не выше 6");
+        rpPerk(Perk.OBESE, "Жирный: старт с ожирением (RP Culinary). Телосложение не выше 4; без Culinary ещё и медленнее");
+
+        beginPerk(Perk.WEAKLING, "Задохлик: медленнее восстанавливает выносливость, бег и плавание дороже (RP Stamina)");
+        bonus(Perk.WEAKLING, Stat.STAMINA_REGEN, -0.2);
+        bonus(Perk.WEAKLING, Stat.STAMINA_MOVE_COST, 0.1);
+        bonus(Perk.WEAKLING, Stat.STAMINA_SWIM_COST, 0.1);
+        B.pop();
+        beginPerk(Perk.ASTHMATIC, "Астматик. С RP Medicine: на бегу падает кислород, приступы, нужен ингалятор. Без неё: после долгого бега — одышка (Медлительность)");
+        ASTHMA_SPRINT_SECONDS = B.comment(" Без Medicine: после стольких секунд бега подряд — одышка").defineInRange("sprint_seconds", 15, 1, 600);
+        ASTHMA_SLOW_SECONDS = B.comment(" Без Medicine: длительность одышки (Медлительность I), секунд").defineInRange("slow_seconds", 10, 1, 600);
         B.pop();
 
-        rpPerk(Perk.DIABETIC, "Требуется ежедневная доза инсулина (РП)");
+        beginPerk(Perk.DELICATE, "Нежный. С RP Medicine: заживление −20 %, кровопотеря +20 %, боль +20 %. Без неё: медленнее восстанавливает здоровье");
+        DELICATE_HEAL_MULT = B.comment(" Без Medicine: множитель восстановления здоровья").defineInRange("heal_multiplier", 0.8, 0.0, 10.0);
+        B.pop();
+        beginPerk(Perk.FRAGILE, "Хрупкий: +20 % урона по телу (с Medicine — по частям тела), сильнее отбрасывает");
+        FRAGILE_DAMAGE_MULT = B.comment(" Без Medicine: множитель получаемого урона").defineInRange("damage_multiplier", 1.2, 0.0, 10.0);
+        FRAGILE_KNOCKBACK_PERCENT = B.comment(" Насколько сильнее отбрасывает, %").defineInRange("knockback_percent", 20.0, 0.0, 500.0);
+        B.pop();
+        rpPerk(Perk.AMPUTEE, "Ампутант: старт без руки или ноги (механика — RP Medicine)");
+        rpPerk(Perk.DIABETIC, "Требуется ежедневная доза инсулина (с RP Medicine — настоящий сахар в крови, иначе РП)");
 
+        beginPerk(Perk.WEAK_STOMACH, "Слабый желудок: травится чаще. Без RP Culinary — иногда тошнит от любой еды");
+        WEAK_STOMACH_CHANCE_PERCENT = B.comment(" Без Culinary: шанс после еды получить Голод на 15 с").defineInRange("vanilla_sick_chance_percent", 5.0, 0.0, 100.0);
+        B.pop();
+        rpPerk(Perk.BIG_EATER, "Обжора: голод быстрее, желудок больше (механика — RP Culinary)");
         beginPerk(Perk.ANOREXIC, "Пониженный предел сытости и внезапные отказы от еды");
         ANOREXIA_MAX_FOOD = B.comment(" Без RP Culinary: максимальный уровень голода (из 20; 14 = 7 окорочков). С ним — желудок меньше (настройки Кулинарии)")
                 .defineInRange("max_food_level", 14, 1, 20);
@@ -378,16 +472,59 @@ public final class Config {
         ANOREXIA_REFUSE_SECONDS = B.comment(" Длительность отказа от еды, реальные секунды")
                 .defineInRange("refuse_seconds", 120, 1, 36000);
         B.pop();
-
-        beginPerk(Perk.WEAKLING, "Пониженная выносливость: меньше максимум и медленнее восстановление");
-        bonus(Perk.WEAKLING, Stat.STAMINA_MAX, -250.0);
-        bonus(Perk.WEAKLING, Stat.STAMINA_REGEN, -0.25);
+        rpPerk(Perk.HIGH_THIRST, "Много пьёт: вода тратится быстрее (механика — RP Culinary)");
+        rpPerk(Perk.SLOW_METABOLISM, "Склонность к полноте: тратит на 15 % меньше, легко набирает вес (нужен RP Culinary)");
+        beginPerk(Perk.BAD_TEETH, "Плохие зубы: боль при еде. Без RP Culinary — еда иногда ранит");
+        BAD_TEETH_CHANCE_PERCENT = B.comment(" Без Culinary: шанс, что еда нанесёт урон").defineInRange("vanilla_hurt_chance_percent", 20.0, 0.0, 100.0);
         B.pop();
 
-        beginPerk(Perk.HOMEBODY, "Пониженная устойчивость к температуре (LSO). С RP Medicine — слабый иммунитет");
+        beginPerk(Perk.TURTLE, "Черепаха: пониженная скорость передвижения");
+        bonus(Perk.TURTLE, Stat.MOVEMENT_SPEED, -15.0);
+        B.pop();
+        beginPerk(Perk.CLUMSY_RUNNER, "Неуклюжий бегун: на бегу иногда спотыкается (с RP Medicine — может подвернуть ногу)");
+        CLUMSY_RUNNER_CHANCE_PERCENT = B.comment(" Шанс споткнуться за секунду бега").defineInRange("trip_chance_percent", 0.5, 0.0, 100.0);
+        CLUMSY_RUNNER_COOLDOWN_MINUTES = B.comment(" Не чаще раза в N минут").defineInRange("cooldown_minutes", 10, 1, 1440);
+        B.pop();
+        beginPerk(Perk.CLUMSY, "Иногда роняет предмет из рук при использовании");
+        CLUMSY_DROP_CHANCE_PERCENT = B.comment(" Шанс выронить предмет при использовании (ПКМ)")
+                .defineInRange("drop_chance_percent", 5.0, 0.0, 100.0);
+        B.pop();
+        beginPerk(Perk.LANDLUBBER, "Не умеет плавать: ходит по дну, не может всплыть");
+        bonus(Perk.LANDLUBBER, Stat.SWIM_SPEED, -0.3);
+        LANDLUBBER_SINK_SPEED = B.comment(" Скорость погружения в толще воды, блоков за тик")
+                .defineInRange("sink_speed", 0.03, 0.0, 1.0);
+        B.pop();
+
+        beginPerk(Perk.SLOW_LEARNER, "Плохообучаемый: меньше опыта всех навыков, кроме Силы и Телосложения");
+        SLOW_LEARNER_XP = B.comment(" Множитель опыта").defineInRange("xp_multiplier", 0.8, 0.0, 10.0);
+        B.pop();
+        rpPerk(Perk.SLOW_WORKER, "Медлительный: медицина и готовка на 20 % медленнее (механика — RP Medicine, RP Culinary)");
+        rpPerk(Perk.ILLITERATE, "Неграмотный: не читает тексты (с RP PDA — сообщения каракулями, иначе РП)");
+
+        rpPerk(Perk.COWARD, "Трусливый: быстро поддаётся панике (РП; позже — психика)");
+        rpPerk(Perk.SUGGESTIBLE, "Внушаемый: легче поддаётся когнитивному воздействию (РП; позже — психика)");
+        rpPerk(Perk.HEMOPHOBIC, "Гемофоб: паника при виде крови (с RP Medicine — лечение с кровью труднее, иначе РП)");
+        beginPerk(Perk.PACIFIST, "Не воюет с людьми: урон по людям сильно снижен, боевые навыки не выше 1 и почти не растут; мирные навыки учит быстрее");
+        B.pop();
+        beginPerk(Perk.CAFFEINE_ADDICTION, "Без кофеина падает скорость бега и атаки. После сна — сразу ломка");
+        CAFFEINE_WITHDRAWAL_MINUTES = B.comment(" Через сколько реальных минут без кофеина начинается ломка")
+                .defineInRange("withdrawal_minutes", 60, 1, 1440);
+        CAFFEINE_SPEED_PENALTY_PERCENT = B.comment(" Штраф к скорости во время ломки, %")
+                .defineInRange("speed_penalty_percent", 30.0, 0.0, 100.0);
+        CAFFEINE_ATTACK_SPEED_PENALTY_PERCENT = B.comment(" Штраф к скорости атаки во время ломки, %")
+                .defineInRange("attack_speed_penalty_percent", 30.0, 0.0, 100.0);
+        CAFFEINE_ITEMS = B.comment(" ID предметов, которые снимают ломку (едят или пьют)")
+                .defineListAllowEmpty(List.of("caffeine_items"), List.of("minecraft:cookie"), Config::isString);
+        B.pop();
+        rpPerk(Perk.ALCOHOL_ADDICT, "Алкоголик: без алкоголя — стресс, потом ломка (механика — RP Medicine, иначе РП)");
+        rpPerk(Perk.SMOKER, "Курильщик: без курения настроение хуже, ломка (механика — RP Medicine, иначе РП)");
+        rpPerk(Perk.TEETOTALER, "Не переносит алкоголь (РП)");
+
+        beginPerk(Perk.HOMEBODY, "Домашний: пониженная устойчивость к температуре (LSO). С RP Medicine — иммунитет слабее");
         bonus(Perk.HOMEBODY, Stat.THERMAL_RESISTANCE, -2.0);
         B.pop();
-
+        beginPerk(Perk.SUN_SENSITIVE, "Чувствительность к солнцу: днём под открытым небом болит голова (с RP Medicine), без неё — Слабость");
+        B.pop();
         beginPerk(Perk.UNLUCKY, "Неприятности случаются именно с вами");
         bonus(Perk.UNLUCKY, Stat.LUCK, -2.0);
         UNLUCKY_RETARGET_CHANCE_PERCENT = B.comment(
@@ -411,51 +548,12 @@ public final class Config {
         UNLUCKY_TOOL_DAMAGE_PERCENT = B.comment(" Соскользнувший инструмент: потеря прочности, % от максимума")
                 .defineInRange("tool_mishap_damage_percent", 5.0, 0.0, 100.0);
         B.pop();
-
-        beginPerk(Perk.TURTLE, "Пониженная скорость передвижения");
-        bonus(Perk.TURTLE, Stat.MOVEMENT_SPEED, -17.0);
-        B.pop();
-
-        beginPerk(Perk.WIMP, "Пониженный урон, скорость ударов и отбрасывание в ближнем бою");
-        bonus(Perk.WIMP, Stat.ATTACK_DAMAGE, -0.1);
-        bonus(Perk.WIMP, Stat.ATTACK_SPEED, -0.5);
-        bonus(Perk.WIMP, Stat.MELEE_KNOCKBACK, -100.0);
-        B.pop();
-
-        rpPerk(Perk.SUGGESTIBLE, "Легче поддаётся когнитивному воздействию (РП)");
-
-        beginPerk(Perk.CAFFEINE_ADDICTION, "Без кофеина падает скорость бега и атаки. После сна — сразу ломка");
-        CAFFEINE_WITHDRAWAL_MINUTES = B.comment(" Через сколько реальных минут без кофеина начинается ломка")
-                .defineInRange("withdrawal_minutes", 60, 1, 1440);
-        CAFFEINE_SPEED_PENALTY_PERCENT = B.comment(" Штраф к скорости во время ломки, %")
-                .defineInRange("speed_penalty_percent", 30.0, 0.0, 100.0);
-        CAFFEINE_ATTACK_SPEED_PENALTY_PERCENT = B.comment(" Штраф к скорости атаки во время ломки, %")
-                .defineInRange("attack_speed_penalty_percent", 30.0, 0.0, 100.0);
-        CAFFEINE_ITEMS = B.comment(" ID предметов, которые снимают ломку (едят или пьют)")
-                .defineListAllowEmpty(List.of("caffeine_items"), List.of("minecraft:cookie"), Config::isString);
-        B.pop();
-
-        rpPerk(Perk.COWARD, "Быстро поддаётся панике (РП)");
-
-        beginPerk(Perk.PACIFIST, "Не воюет с людьми: урон по людям сильно снижен, боевые навыки не выше 1 и почти не растут; мирные навыки учит быстрее");
-        B.pop();
-
-        beginPerk(Perk.CLUMSY, "Иногда роняет предмет из рук при использовании");
-        CLUMSY_DROP_CHANCE_PERCENT = B.comment(" Шанс выронить предмет при использовании (ПКМ)")
-                .defineInRange("drop_chance_percent", 5.0, 0.0, 100.0);
+        beginPerk(Perk.DISORGANIZED, "-3 слота инвентаря");
+        bonus(Perk.DISORGANIZED, Stat.INVENTORY_SLOTS, -3.0);
         B.pop();
 
         rpPerk(Perk.TECHNOPHOBE, "Боится и не понимает сложную технику и электронику (РП)");
-
-        beginPerk(Perk.LANDLUBBER, "Не умеет плавать: ходит по дну, не может всплыть");
-        bonus(Perk.LANDLUBBER, Stat.SWIM_SPEED, -0.3);
-        LANDLUBBER_SINK_SPEED = B.comment(" Скорость погружения в толще воды, блоков за тик")
-                .defineInRange("sink_speed", 0.03, 0.0, 1.0);
-        B.pop();
-
-        rpPerk(Perk.TEETOTALER, "Не переносит алкоголь (РП)");
         rpPerk(Perk.KITCHEN_NIGHTMARE, "Кухонный кошмар: готовит на 3 уровня Кулинарии хуже, чаще подгорает (нужен RP Culinary)");
-        rpPerk(Perk.SLOW_METABOLISM, "Склонность к полноте: тратит на 15 % меньше, легко набирает вес (нужен RP Culinary)");
         B.pop();
 
         // =====================================================================
@@ -482,26 +580,45 @@ public final class Config {
                         " Формат: \"перк = перк2, перк3\". Связь работает в обе стороны.",
                         " При выдаче перка все несовместимые с ним снимаются, баллы за них возвращаются.")
                 .defineListAllowEmpty(List.of("pairs"), List.of(
-                        "survivor = fragile",
-                        "athlete = turtle",
-                        "strongman = wimp",
-                        "melee_fighter = wimp",
-                        "tourist = homebody",
-                        "organized = disorganized",
-                        "enduring = weakling",
+                        "puny = out_of_shape, fit, athletic",
+                        "out_of_shape = fit, athletic, emaciated, obese",
+                        "fit = athletic, emaciated, overweight, obese",
+                        "athletic = emaciated, overweight, obese, weakling, asthmatic, turtle, clumsy_runner",
+                        "wimp = weak, strong, strongman, melee_fighter",
+                        "weak = strong, strongman",
+                        "strong = strongman, emaciated",
+                        "strongman = emaciated",
+                        "emaciated = overweight, obese, big_eater, slow_metabolism",
+                        "overweight = obese, anorexic",
+                        "obese = weak_stomach, anorexic, fast_metabolism",
+                        "enduring = weakling, asthmatic",
+                        "weakling = asthmatic",
+                        "survivor = delicate, fragile",
+                        "tough = delicate, fragile",
+                        "iron_stomach = weak_stomach",
+                        "light_eater = big_eater, anorexic",
+                        "big_eater = anorexic",
+                        "low_thirst = high_thirst",
+                        "fast_metabolism = slow_metabolism",
+                        "slow_metabolism = anorexic",
+                        "fleet = turtle",
+                        "agile = clumsy, clumsy_runner",
+                        "sailor = landlubber",
+                        "fast_learner = slow_learner",
+                        "quick_worker = slow_worker",
                         "brave = coward",
                         "strong_willed = suggestible",
-                        "alcoholic = teetotaler",
+                        "medic = first_aid, hemophobic",
                         "pacifist = soldier, gunner, explosives, melee_fighter, basic_training, nerd_rage",
                         "soldier = gunner, basic_training",
-                        "sailor = landlubber",
+                        "alcohol_addict = teetotaler",
+                        "alcoholic = teetotaler",
+                        "tourist = homebody",
+                        "solar_powered = sun_sensitive",
                         "lucky = unlucky",
-                        "agile = clumsy",
+                        "organized = disorganized",
                         "technophobe = technician, hacker, pilot",
-                        "soldier = gunner",
-                        "medic = first_aid",
-                        "kitchen_nightmare = cook, dietitian, field_cook",
-                        "fast_metabolism = slow_metabolism, anorexic"
+                        "kitchen_nightmare = cook, dietitian, field_cook"
                 ), Config::isString);
         B.pop();
 
@@ -549,6 +666,47 @@ public final class Config {
         t.set(v);
         t.save();
         return true;
+    }
+
+    /** Цены по умолчанию до 2.0.0 (у тех особенностей, чья цена поменялась). */
+    private static final Map<Perk, Integer> OLD_COSTS = Map.ofEntries(
+            Map.entry(Perk.SURVIVOR, 7), Map.entry(Perk.TOUGH, 6), Map.entry(Perk.STRONGMAN, 5), Map.entry(Perk.NERD_RAGE, 4),
+            Map.entry(Perk.SOLAR_POWERED, 3), Map.entry(Perk.LIGHT_TRAVEL, 3), Map.entry(Perk.LUCKY, 5), Map.entry(Perk.ORGANIZED, 5),
+            Map.entry(Perk.TOURIST, 5), Map.entry(Perk.SMOKER, 1), Map.entry(Perk.GOURMET, 2), Map.entry(Perk.FRAGILE, 8),
+            Map.entry(Perk.DISORGANIZED, 7), Map.entry(Perk.DIABETIC, 7), Map.entry(Perk.ANOREXIC, 6), Map.entry(Perk.WEAKLING, 6),
+            Map.entry(Perk.HOMEBODY, 5), Map.entry(Perk.UNLUCKY, 5), Map.entry(Perk.TURTLE, 5), Map.entry(Perk.WIMP, 5),
+            Map.entry(Perk.SUGGESTIBLE, 5), Map.entry(Perk.CAFFEINE_ADDICTION, 5), Map.entry(Perk.COWARD, 4), Map.entry(Perk.CLUMSY, 4),
+            Map.entry(Perk.LANDLUBBER, 3), Map.entry(Perk.KITCHEN_NIGHTMARE, 3), Map.entry(Perk.SLOW_METABOLISM, 2));
+
+    /**
+     * 2.0.0: в конфиге сервера осталось старое значение по умолчанию — записать новое. Своё, изменённое вручную, не трогаем
+     * (как с таблицами стрельбы). Возвращает, сколько значений обновлено.
+     */
+    private static int upgradeDefaults2() {
+        int n = 0;
+        for (var e : OLD_COSTS.entrySet()) {
+            ForgeConfigSpec.IntValue v = COSTS.get(e.getKey());
+            if (v != null && v.get().equals(e.getValue()) && e.getKey().getDefaultCost() != e.getValue()) {
+                v.set(e.getKey().getDefaultCost());
+                n++;
+            }
+        }
+        if (PHYSICAL_START.get() == 4) { PHYSICAL_START.set(3); n++; }
+        if (Math.abs(STRENGTH_MELEE_PER_LEVEL.get() - 0.03) < 1e-9) { STRENGTH_MELEE_PER_LEVEL.set(0.05); n++; }
+        n += upgradeBonus(Perk.TURTLE, Stat.MOVEMENT_SPEED, -17.0, -15.0);
+        n += upgradeBonus(Perk.ENDURING, Stat.STAMINA_REGEN, 0.25, 0.2);
+        n += upgradeBonus(Perk.WEAKLING, Stat.STAMINA_REGEN, -0.25, -0.2);
+        n += upgradeBonus(Perk.TOUGH, Stat.ARMOR_TOUGHNESS, 3.0, 1.0);
+        if (n > 0) SPEC.save();
+        return n;
+    }
+
+    private static int upgradeBonus(Perk perk, Stat stat, double oldDef, double newDef) {
+        Map<Stat, ForgeConfigSpec.DoubleValue> m = BONUSES.get(perk);
+        ForgeConfigSpec.DoubleValue v = m == null ? null : m.get(stat);
+        if (v == null || Math.abs(v.get() - oldDef) > 1e-9) return 0;
+        v.set(newDef);
+        return 1;
     }
 
     /** Значение таблицы по уровню 0..10 (не хватает чисел — 1.0). */
@@ -654,6 +812,8 @@ public final class Config {
         boolean upgraded = upgradeTable(T_SPREAD, SPREAD_V1, SPREAD_V2) | upgradeTable(T_RECOIL, RECOIL_V1, RECOIL_V2)
                 | upgradeTable(T_RELOAD, RELOAD_V1, RELOAD_V2) | upgradeTable(T_AIM, AIM_V1, AIM_V2);
         if (upgraded) Rpperks.LOGGER.info("[RP Perks] Таблицы стрельбы обновлены до новых значений по умолчанию (09.10.2026)");
+        int changed = upgradeDefaults2();
+        if (changed > 0) Rpperks.LOGGER.info("[RP Perks] 2.0.0: {} значений по умолчанию обновлено (цены и числа особенностей). Свои правки не тронуты.", changed);
 
         // Предметы с кофеином
         Set<ResourceLocation> items = new HashSet<>();

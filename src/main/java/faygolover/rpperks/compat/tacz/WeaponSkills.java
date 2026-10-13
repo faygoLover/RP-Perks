@@ -73,8 +73,7 @@ public final class WeaponSkills {
         int lvl = on ? SkillService.level(d, skill) : 5;
         double recoil = Config.table(Config.T_RECOIL, lvl);
         if (on && skill == SkillDef.HEAVY_ARMS) {
-            int str = SkillService.level(d, SkillDef.STRENGTH);
-            recoil *= Math.max(0.5, 1.0 - (str - 4) * Config.get(Config.STRENGTH_HEAVY_RECOIL_PER_LEVEL));
+            recoil *= faygolover.rpperks.skill.PhysicalEffects.heavyRecoil(d);
         }
         set(p, "inaccuracy", SPREAD, on ? Config.table(Config.T_SPREAD, lvl) : 1.0);
         set(p, "recoil", RECOIL, on ? recoil : 1.0);
