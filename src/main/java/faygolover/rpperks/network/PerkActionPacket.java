@@ -29,7 +29,13 @@ public class PerkActionPacket {
         // Навыки: amount — номер навыка (SkillDef.ordinal). Уровень ставится «от ГМа», как /rpcore skill
         ADMIN_SKILL_UP,
         ADMIN_SKILL_DOWN,
-        ADMIN_SKILL_RESET;
+        ADMIN_SKILL_RESET,
+        // Анкета тела (RP Core): amount = пол + 4·возраст + 512·рост (см), см. {@link #packProfile}
+        ADMIN_PROFILE;
+
+        public static int packProfile(int sex, int age, int heightCm) {
+            return sex + age * 4 + heightCm * 512;
+        }
 
         public boolean isAdmin() { return ordinal() >= ADMIN_GRANT.ordinal(); }
     }

@@ -1,5 +1,6 @@
 package faygolover.rpperks.client.screen;
 
+import faygolover.rpcore.api.BodyProfile;
 import faygolover.rpperks.Config;
 import faygolover.rpperks.capability.PlayerPerks;
 import faygolover.rpperks.capability.PlayerPerksProvider;
@@ -26,20 +27,19 @@ import java.util.*;
 /**
  * Окно перков.
  * <ul>
- *   <li>Режим игрока (/rpperks): свои перки, каталог, «Взять», «Отказаться» и «Сбросить все» за жетоны.</li>
- *   <li>Режим админа (/rpperks admin &lt;ник&gt;): выдача и снятие любых перков, запрет перков, закрытие выбора,
- *   баллы, жетоны, очистка карточки.</li>
+ *   <li>Режим игрока (/rpperks): одинаковый у игрока и ГМа. Пока анкета тела не сохранена — только анкета; потом —
+ *   свои перки (первая строка «Взятых» — анкета), каталог, «Взять», «Отказаться» и «Сбросить все» за жетоны.</li>
+ *   <li>Режим админа (/rpperks admin &lt;ник&gt;): выдача и снятие любых перков (и служебных), запрет перков, закрытие
+ *   выбора, баллы, жетоны, очистка карточки, анкета игрока.</li>
  * </ul>
  * Все действия уходят на сервер пакетом {@link PerkActionPacket}; сервер проверяет их заново.
  */
 public class PerkScreen extends Screen {
-    // ---------- Размеры ----------
-    private static final int WIDTH = 380;
-    private static final int HEIGHT_SELF = 236;
-    private static final int HEIGHT_ADMIN = 258;
-    private static final int PAD = 8;
+    // ---------- Размеры (окно растёт с экраном) ----------
+    private static final int MIN_W = 380, MAX_W = 480;
+    private static final int PAD = 6;
     private static final int ROW = 13;
-    private static final int LIST_W = 186;
+    private static final int BTN = 16;
     private static final long CONFIRM_MS = 3000;
 
     // ---------- Цвета (ARGB) ----------
@@ -60,11 +60,11 @@ public class PerkScreen extends Screen {
         MAIN("main", Perk.Category.MAIN),
         SKILL("skill", Perk.Category.SKILL),
         NEGATIVE("negative", Perk.Category.NEGATIVE),
-        SERVICE("service", Perk.Category.SERVICE),
-        /** Навыки 0–10: уровень, опыт, откуда уровень (свои данные игрока). */
+        /** Навыки 0–10: уровень, опыт, откуда уровень. */
         SKILLS("skills", null),
-        /** Анкета тела (RP Core): пол, возраст, рост — игрок заполняет один раз. */
-        PROFILE("profile", null);
+        /** Анкета тела игрока (RP Core) — только в админском окне. */
+        PROFILE("profile", null),
+        SERVICE("service", Perk.Category.SERVICE);
 
         final String key;
         @Nullable final Perk.Category category;
@@ -84,12 +84,18 @@ public class PerkScreen extends Screen {
 
     private Tab tab = Tab.MINE;
     @Nullable private Perk selected;
+    /** Выбрана строка «Анкета» во «Взятых». */
+    private boolean profileSelected;
     @Nullable private faygolover.rpperks.skill.SkillDef selectedSkill;
     private static final int SKILL_ROW = 24;
     private double scroll;
+    /** Прокрутка описания справа. */
+    private double infoScroll;
 
-    private int left, top, panelHeight;
+    private int left, top, panelW, panelHeight, listW;
     private int listX, listY, listH, infoX, infoY, infoW, infoH, bottomY;
+    /** С какой разметкой собрано окно: только анкета (своя, ещё не сохранена) или всё. */
+    private boolean builtProfileOnly;
 
     private final Map<Tab, Button> tabButtons = new EnumMap<>(Tab.class);
     private Button actionButton;
@@ -102,13 +108,13 @@ public class PerkScreen extends Screen {
     @Nullable private String pendingKey;
     private long pendingUntil;
 
-    // Анкета тела (своя, только в режиме игрока)
+    // Анкета тела: своя (до сохранения) или игрока в админском окне
     private final List<Button> profileButtons = new ArrayList<>();
     @Nullable private Button sexButton;
     @Nullable private Button saveProfileButton;
-    private faygolover.rpcore.api.BodyProfile.Sex profSex = faygolover.rpcore.api.BodyProfile.Sex.NONE;
-    private int profAge = faygolover.rpcore.api.BodyProfile.DEFAULT_AGE;
-    private int profHeight = (int) faygolover.rpcore.api.BodyProfile.DEFAULT_HEIGHT;
+    private BodyProfile.Sex profSex = BodyProfile.Sex.NONE;
+    private int profAge = BodyProfile.DEFAULT_AGE;
+    private int profHeight = (int) BodyProfile.DEFAULT_HEIGHT;
     private boolean profLoaded;
 
     public PerkScreen(boolean adminMode, UUID targetId, String targetName, boolean canSeeHidden) {
@@ -118,7 +124,7 @@ public class PerkScreen extends Screen {
         this.adminMode = adminMode;
         this.targetId = targetId;
         this.targetName = targetName;
-        this.canSeeHidden = canSeeHidden || adminMode;
+        this.canSeeHidden = adminMode;
     }
 
     // =====================================================================
@@ -135,21 +141,52 @@ public class PerkScreen extends Screen {
         return mc.player.getCapability(PlayerPerksProvider.PLAYER_PERKS).resolve().orElse(null);
     }
 
+    /** Своя анкета (копия с сервера). */
+    private BodyProfile ownProfile() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.player == null ? BodyProfile.DEFAULT : faygolover.rpcore.api.RpCoreAPI.profile(mc.player);
+    }
+
+    /** Анкета того, чьё окно: своя или игрока у админа. */
+    private BodyProfile shownProfile() {
+        return adminMode ? ClientPerkData.targetProfile : ownProfile();
+    }
+
+    /** Своё окно, анкета ещё не сохранена: кроме анкеты ничего нет. */
+    private boolean profileOnly() {
+        return !adminMode && !ownProfile().filled();
+    }
+
+    /** Форма анкеты на экране: своя до сохранения или вкладка «Анкета» у админа. */
+    private boolean profileForm() {
+        return builtProfileOnly || (adminMode && tab == Tab.PROFILE);
+    }
+
     private List<Tab> visibleTabs() {
+        if (builtProfileOnly) return List.of();
         List<Tab> tabs = new ArrayList<>(List.of(Tab.MINE, Tab.MAIN, Tab.SKILL, Tab.NEGATIVE, Tab.SKILLS));
-        if (!adminMode) tabs.add(Tab.PROFILE);
-        if (canSeeHidden) tabs.add(Tab.SERVICE);
+        if (adminMode) {
+            tabs.add(Tab.PROFILE);
+            tabs.add(Tab.SERVICE);
+        }
         return tabs;
     }
 
+    /** Во «Взятых» первая строка — анкета (после сохранения; у админа — всегда). */
+    private boolean profileRow() {
+        return tab == Tab.MINE && (adminMode || ownProfile().filled());
+    }
+
     private List<Perk> rows(PlayerPerks data) {
-        if (tab == Tab.SKILLS || tab == Tab.PROFILE) return List.of();
+        if (tab == Tab.SKILLS || tab == Tab.PROFILE || builtProfileOnly) return List.of();
         if (tab == Tab.MINE) {
             return data.getActivePerks().stream().filter(p -> PerkRules.isVisible(p, canSeeHidden)).toList();
         }
+        // В каталоге — по цене (дешёвые сверху), при равной — как в каталоге.
         return Arrays.stream(Perk.values())
                 .filter(p -> p.getCategory() == tab.category)
                 .filter(p -> PerkRules.isVisible(p, canSeeHidden))
+                .sorted(Comparator.comparingInt(Perk::getCost))
                 .toList();
     }
 
@@ -159,67 +196,80 @@ public class PerkScreen extends Screen {
 
     @Override
     protected void init() {
-        panelHeight = adminMode ? HEIGHT_ADMIN : HEIGHT_SELF;
-        left = (width - WIDTH) / 2;
+        builtProfileOnly = profileOnly();
+        panelW = Mth.clamp(width - 16, MIN_W, MAX_W);
+        panelHeight = Mth.clamp(height - 16, adminMode ? 250 : 220, adminMode ? 320 : 300);
+        left = (width - panelW) / 2;
         top = (height - panelHeight) / 2;
 
-        int bottomBar = adminMode ? 48 : 30;
-        bottomY = top + panelHeight - bottomBar;
+        int bottomBar = adminMode ? 44 : builtProfileOnly ? 0 : 24;
+        bottomY = top + panelHeight - (bottomBar == 0 ? PAD : bottomBar);
         listX = left + PAD;
-        listY = top + 48;
-        listH = bottomY - 6 - listY;
-        infoX = listX + LIST_W + 6;
+        listY = top + (builtProfileOnly ? 20 : 36);
+        listH = bottomY - (bottomBar == 0 ? 0 : 4) - listY;
+        listW = Math.min(200, (panelW - 2 * PAD - 6) * 9 / 20);
+        infoX = listX + listW + 6;
         infoY = listY;
-        infoW = left + WIDTH - PAD - infoX;
+        infoW = left + panelW - PAD - infoX;
         infoH = listH;
 
         // Вкладки
         tabButtons.clear();
         List<Tab> tabs = visibleTabs();
-        int gap = 2;
-        int tabW = (WIDTH - 2 * PAD - gap * (tabs.size() - 1)) / tabs.size();
-        int tx = left + PAD;
-        for (Tab t : tabs) {
-            Button button = addRenderableWidget(Button.builder(t.title(), b -> selectTab(t))
-                    .bounds(tx, top + 26, tabW, 16).build());
-            tabButtons.put(t, button);
-            tx += tabW + gap;
+        if (!tabs.isEmpty()) {
+            int gap = 2;
+            int tabW = (panelW - 2 * PAD - gap * (tabs.size() - 1)) / tabs.size();
+            int tx = left + PAD;
+            for (Tab t : tabs) {
+                Button button = addRenderableWidget(Button.builder(t.title(), b -> selectTab(t))
+                        .bounds(tx, top + 18, tabW, 14).build());
+                tabButtons.put(t, button);
+                tx += tabW + gap;
+            }
         }
 
         // Кнопки в карточке перка. У админа их две: выдать/снять и запретить/разрешить брать
-        int buttonY = infoY + infoH - 22;
+        int buttonY = infoY + infoH - BTN - 4;
         if (adminMode) {
             int half = (infoW - 10) / 2;
             actionButton = addRenderableWidget(Button.builder(Component.empty(), b -> onAction())
-                    .bounds(infoX + 4, buttonY, half, 18).build());
+                    .bounds(infoX + 4, buttonY, half, BTN).build());
             blockButton = addRenderableWidget(Button.builder(Component.empty(), b -> onToggleBlock())
-                    .bounds(infoX + 6 + half, buttonY, half, 18).build());
+                    .bounds(infoX + 6 + half, buttonY, half, BTN).build());
         } else {
             actionButton = addRenderableWidget(Button.builder(Component.empty(), b -> onAction())
-                    .bounds(infoX + 4, buttonY, infoW - 8, 18).build());
+                    .bounds(infoX + 4, buttonY, infoW - 8, BTN).build());
         }
 
-        // Анкета тела: кнопки в левой панели, видны только на своей вкладке
+        // Анкета тела: кнопки в левой панели
         profileButtons.clear();
-        if (!adminMode) {
-            int bx = listX + LIST_W - 6;
-            int py = listY + 10;
+        sexButton = null;
+        saveProfileButton = null;
+        if (builtProfileOnly || adminMode) {
+            int bx = listX + listW - 6;
+            int py = listY + 8;
             sexButton = profileButton(Component.empty(), bx - 90, py, 90, () -> profSex = nextSex(profSex));
-            profileButton(Component.literal("-5"), bx - 90, py + 26, 20, () -> profAge -= 5);
-            profileButton(Component.literal("-1"), bx - 68, py + 26, 20, () -> profAge -= 1);
-            profileButton(Component.literal("+1"), bx - 42, py + 26, 20, () -> profAge += 1);
-            profileButton(Component.literal("+5"), bx - 20, py + 26, 20, () -> profAge += 5);
-            profileButton(Component.literal("-5"), bx - 90, py + 52, 20, () -> profHeight -= 5);
-            profileButton(Component.literal("-1"), bx - 68, py + 52, 20, () -> profHeight -= 1);
-            profileButton(Component.literal("+1"), bx - 42, py + 52, 20, () -> profHeight += 1);
-            profileButton(Component.literal("+5"), bx - 20, py + 52, 20, () -> profHeight += 5);
-            saveProfileButton = profileButton(Component.empty(), listX + 6, py + 84, LIST_W - 12, this::onSaveProfile);
+            profileButton(Component.literal("-5"), bx - 90, py + 22, 20, () -> profAge -= 5);
+            profileButton(Component.literal("-1"), bx - 68, py + 22, 20, () -> profAge -= 1);
+            profileButton(Component.literal("+1"), bx - 42, py + 22, 20, () -> profAge += 1);
+            profileButton(Component.literal("+5"), bx - 20, py + 22, 20, () -> profAge += 5);
+            profileButton(Component.literal("-5"), bx - 90, py + 44, 20, () -> profHeight -= 5);
+            profileButton(Component.literal("-1"), bx - 68, py + 44, 20, () -> profHeight -= 1);
+            profileButton(Component.literal("+1"), bx - 42, py + 44, 20, () -> profHeight += 1);
+            profileButton(Component.literal("+5"), bx - 20, py + 44, 20, () -> profHeight += 5);
+            saveProfileButton = profileButton(Component.empty(), listX + 6, py + 72, listW - 12, this::onSaveProfile);
+            if (builtProfileOnly && !profLoaded) loadProfile(ownProfile());
         }
 
-        int by = bottomY + 6;
+        resetButton = null;
+        wipeButton = null;
+        selectionButton = null;
+        int by = bottomY + 4;
         if (!adminMode) {
-            resetButton = addRenderableWidget(Button.builder(Component.empty(), b -> onReset())
-                    .bounds(left + PAD, by, 150, 18).build());
+            if (!builtProfileOnly) {
+                resetButton = addRenderableWidget(Button.builder(Component.empty(), b -> onReset())
+                        .bounds(left + PAD, by, 140, BTN).build());
+            }
         } else {
             // Ряд 1: баллы и очистка карточки
             small("-10", left + 58, by, 26, () -> admin(Action.ADMIN_POINTS, null, -10));
@@ -227,17 +277,17 @@ public class PerkScreen extends Screen {
             small("+1", left + 152, by, 22, () -> admin(Action.ADMIN_POINTS, null, 1));
             small("+10", left + 176, by, 26, () -> admin(Action.ADMIN_POINTS, null, 10));
             wipeButton = addRenderableWidget(Button.builder(Component.empty(), b -> onWipe())
-                    .bounds(left + WIDTH - PAD - 120, by, 120, 18).build());
+                    .bounds(left + panelW - PAD - 120, by, 120, BTN).build());
 
             // Ряд 2: жетоны
-            int by2 = by + 22;
+            int by2 = by + 20;
             small("-", left + 58, by2, 20, () -> admin(Action.ADMIN_REFUSE_TOKENS, null, -1));
             small("+", left + 108, by2, 20, () -> admin(Action.ADMIN_REFUSE_TOKENS, null, 1));
             small("-", left + 176, by2, 20, () -> admin(Action.ADMIN_RESET_TOKENS, null, -1));
             small("+", left + 226, by2, 20, () -> admin(Action.ADMIN_RESET_TOKENS, null, 1));
             selectionButton = addRenderableWidget(Button.builder(Component.empty(),
                             b -> admin(Action.ADMIN_TOGGLE_SELECTION, null, 0))
-                    .bounds(left + WIDTH - PAD - 120, by2, 120, 18).build());
+                    .bounds(left + panelW - PAD - 120, by2, 120, BTN).build());
         }
         updateButtons();
     }
@@ -246,52 +296,55 @@ public class PerkScreen extends Screen {
         Button b = addRenderableWidget(Button.builder(label, btn -> {
             action.run();
             clampProfile();
-            pendingKey = null;
+            if (btn != saveProfileButton) pendingKey = null;
             updateButtons();
-        }).bounds(x, y, w, 18).build());
+        }).bounds(x, y, w, BTN).build());
         profileButtons.add(b);
         return b;
     }
 
-    private static faygolover.rpcore.api.BodyProfile.Sex nextSex(faygolover.rpcore.api.BodyProfile.Sex s) {
+    private static BodyProfile.Sex nextSex(BodyProfile.Sex s) {
         return switch (s) {
-            case NONE -> faygolover.rpcore.api.BodyProfile.Sex.MALE;
-            case MALE -> faygolover.rpcore.api.BodyProfile.Sex.FEMALE;
-            case FEMALE -> faygolover.rpcore.api.BodyProfile.Sex.NONE;
+            case NONE -> BodyProfile.Sex.MALE;
+            case MALE -> BodyProfile.Sex.FEMALE;
+            case FEMALE -> BodyProfile.Sex.NONE;
         };
     }
 
     private void clampProfile() {
-        profAge = Mth.clamp(profAge, faygolover.rpcore.api.BodyProfile.MIN_AGE, faygolover.rpcore.api.BodyProfile.MAX_AGE);
-        profHeight = Mth.clamp(profHeight, (int) faygolover.rpcore.api.BodyProfile.MIN_HEIGHT, (int) faygolover.rpcore.api.BodyProfile.MAX_HEIGHT);
+        profAge = Mth.clamp(profAge, BodyProfile.MIN_AGE, BodyProfile.MAX_AGE);
+        profHeight = Mth.clamp(profHeight, (int) BodyProfile.MIN_HEIGHT, (int) BodyProfile.MAX_HEIGHT);
     }
 
-    /** Своя анкета (копия с сервера). */
-    private faygolover.rpcore.api.BodyProfile ownProfile() {
-        Minecraft mc = Minecraft.getInstance();
-        return mc.player == null ? faygolover.rpcore.api.BodyProfile.DEFAULT : faygolover.rpcore.api.RpCoreAPI.profile(mc.player);
+    private void loadProfile(BodyProfile prof) {
+        profSex = prof.sex();
+        profAge = prof.age();
+        profHeight = (int) Math.round(prof.heightCm());
+        profLoaded = true;
     }
 
     private void onSaveProfile() {
+        if (adminMode) {
+            if (!confirm("profile")) return;
+            send(Action.ADMIN_PROFILE, null, Action.packProfile(profSex.ordinal(), profAge, profHeight));
+            playClick();
+            return;
+        }
         if (ownProfile().filled() || !confirm("profile")) return;
         faygolover.rpcore.api.RpCoreAPI.submitProfile(profSex, profAge, profHeight);
         playClick();
     }
 
     private void small(String label, int x, int y, int w, Runnable action) {
-        addRenderableWidget(Button.builder(Component.literal(label), b -> action.run()).bounds(x, y, w, 18).build());
+        addRenderableWidget(Button.builder(Component.literal(label), b -> action.run()).bounds(x, y, w, BTN).build());
     }
 
     private void selectTab(Tab t) {
         tab = t;
-        if (t == Tab.PROFILE && !profLoaded) {
-            var prof = ownProfile();
-            profSex = prof.sex();
-            profAge = prof.age();
-            profHeight = (int) Math.round(prof.heightCm());
-            profLoaded = true;
-        }
+        if (t == Tab.PROFILE) loadProfile(shownProfile());
         scroll = 0;
+        infoScroll = 0;
+        profileSelected = false;
         pendingKey = null;
         updateButtons();
     }
@@ -300,27 +353,29 @@ public class PerkScreen extends Screen {
     public void tick() {
         super.tick();
         if (pendingKey != null && Util.getMillis() > pendingUntil) pendingKey = null;
+        // Анкету сохранили (пришла с сервера) — открыть остальное окно.
+        if (builtProfileOnly != profileOnly()) {
+            tab = Tab.MINE;
+            rebuildWidgets();
+            return;
+        }
         updateButtons();
     }
 
     private void updateButtons() {
         tabButtons.forEach((t, b) -> b.active = t != tab);
         PlayerPerks data = data();
-        boolean profileTab = tab == Tab.PROFILE;
-        boolean profileLocked = ownProfile().filled();
-        for (Button b : profileButtons) {
-            b.visible = profileTab;
-            b.active = !profileLocked;
-        }
+        boolean form = profileForm();
+        for (Button b : profileButtons) b.visible = form;
         if (sexButton != null) sexButton.setMessage(Component.translatable("rpcore.profile.sex." + profSex.id()));
         if (saveProfileButton != null) {
             saveProfileButton.setMessage(isPending("profile")
                     ? Component.translatable("gui.rpperks.button.confirm")
-                    : Component.translatable(profileLocked ? "gui.rpperks.profile.saved" : "gui.rpperks.profile.save"));
+                    : Component.translatable(adminMode ? "gui.rpperks.profile.admin_save" : "gui.rpperks.profile.save"));
         }
 
         if (blockButton != null) {
-            blockButton.visible = data != null && selected != null && selected.getCategory() != Perk.Category.SERVICE;
+            blockButton.visible = data != null && selected != null && !profileSelected && selected.getCategory() != Perk.Category.SERVICE;
             if (blockButton.visible) {
                 blockButton.setMessage(Component.translatable(data.isBlocked(selected)
                         ? "gui.rpperks.button.unblock" : "gui.rpperks.button.block"));
@@ -332,7 +387,7 @@ public class PerkScreen extends Screen {
                     ? "gui.rpperks.button.selection_closed" : "gui.rpperks.button.selection_open"));
         }
 
-        if (profileTab) {
+        if (form || profileSelected) {
             actionButton.visible = false;
             if (blockButton != null) blockButton.visible = false;
         } else if (tab == Tab.SKILLS) {
@@ -410,7 +465,7 @@ public class PerkScreen extends Screen {
             return;
         }
         PlayerPerks data = data();
-        if (data == null || selected == null) return;
+        if (data == null || selected == null || profileSelected) return;
         boolean owned = data.owns(selected);
         if (adminMode) {
             admin(owned ? Action.ADMIN_REVOKE : Action.ADMIN_GRANT, selected, 0);
@@ -448,12 +503,17 @@ public class PerkScreen extends Screen {
     // =====================================================================
 
     private boolean inList(double mx, double my) {
-        return mx >= listX && mx < listX + LIST_W && my >= listY && my < listY + listH;
+        return mx >= listX && mx < listX + listW && my >= listY && my < listY + listH;
+    }
+
+    private boolean inInfo(double mx, double my) {
+        return mx >= infoX && mx < infoX + infoW && my >= infoY && my < infoY + infoH;
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
+        if (profileForm()) return false;
         if (button == 0 && inList(mx, my) && tab == Tab.SKILLS) {
             int index = (int) Math.floor((my - listY - 2 + scroll) / SKILL_ROW);
             if (index >= 0 && index < faygolover.rpperks.skill.SkillDef.VALUES.length) {
@@ -474,6 +534,7 @@ public class PerkScreen extends Screen {
                     }
                 }
                 selectedSkill = skill;
+                infoScroll = 0;
                 updateButtons();
                 return true;
             }
@@ -484,8 +545,21 @@ public class PerkScreen extends Screen {
             if (data == null) return false;
             List<Perk> rows = rows(data);
             int index = (int) Math.floor((my - listY - 2 + scroll) / ROW);
+            if (profileRow()) {
+                if (index == 0) {
+                    profileSelected = true;
+                    selected = null;
+                    infoScroll = 0;
+                    pendingKey = null;
+                    updateButtons();
+                    return true;
+                }
+                index--;
+            }
             if (index >= 0 && index < rows.size()) {
                 selected = rows.get(index);
+                profileSelected = false;
+                infoScroll = 0;
                 pendingKey = null;
                 updateButtons();
                 return true;
@@ -498,6 +572,10 @@ public class PerkScreen extends Screen {
     public boolean mouseScrolled(double mx, double my, double delta) {
         if (inList(mx, my)) {
             scroll -= delta * ROW * 2;
+            return true;
+        }
+        if (inInfo(mx, my)) {
+            infoScroll -= delta * 20;
             return true;
         }
         return super.mouseScrolled(mx, my, delta);
@@ -517,23 +595,23 @@ public class PerkScreen extends Screen {
         renderBackground(g);
 
         // Рамка, фон и панели
-        g.fill(left - 1, top - 1, left + WIDTH + 1, top + panelHeight + 1, C_BORDER);
-        g.fill(left, top, left + WIDTH, top + panelHeight, C_BG);
-        g.fill(listX, listY, listX + LIST_W, listY + listH, C_PANEL);
+        g.fill(left - 1, top - 1, left + panelW + 1, top + panelHeight + 1, C_BORDER);
+        g.fill(left, top, left + panelW, top + panelHeight, C_BG);
+        g.fill(listX, listY, listX + listW, listY + listH, C_PANEL);
         g.fill(infoX, infoY, infoX + infoW, infoY + infoH, C_PANEL);
-        g.fill(left + PAD, bottomY, left + WIDTH - PAD, bottomY + 1, C_BORDER);
+        if (!builtProfileOnly) g.fill(left + PAD, bottomY, left + panelW - PAD, bottomY + 1, C_BORDER);
 
         super.render(g, mouseX, mouseY, partialTick);
 
-        g.drawString(font, title, left + PAD, top + 9, C_TITLE, false);
+        g.drawString(font, title, left + PAD, top + 6, C_TITLE, false);
 
         PlayerPerks data = data();
         if (data == null) {
-            g.drawCenteredString(font, Component.translatable("gui.rpperks.no_data"), left + WIDTH / 2, listY + 20, C_DIM);
+            g.drawCenteredString(font, Component.translatable("gui.rpperks.no_data"), left + panelW / 2, listY + 20, C_DIM);
             return;
         }
 
-        renderStats(g, data);
+        if (!builtProfileOnly) renderStats(g, data);
         renderList(g, data, mouseX, mouseY);
         renderInfo(g, data);
         renderBottom(g, data);
@@ -543,17 +621,17 @@ public class PerkScreen extends Screen {
         String pointsColor = data.getPoints() < 0 ? "§c" : "§e";
         Component stats = Component.translatable("gui.rpperks.stats",
                 pointsColor + data.getPoints(), data.getRefuseTokens(), data.getResetTokens());
-        g.drawString(font, stats, left + WIDTH - PAD - font.width(stats), top + 9, C_TEXT, false);
+        g.drawString(font, stats, left + panelW - PAD - font.width(stats), top + 6, C_TEXT, false);
     }
 
     private void renderList(GuiGraphics g, PlayerPerks data, int mouseX, int mouseY) {
-        if (tab == Tab.PROFILE) {
-            int py = listY + 10;
-            g.drawString(font, Component.translatable("gui.rpperks.profile.sex"), listX + 6, py + 5, C_TEXT, false);
-            g.drawString(font, Component.translatable("gui.rpperks.profile.age"), listX + 6, py + 31, C_TEXT, false);
-            g.drawString(font, String.valueOf(profAge), listX + 52, py + 31, C_TITLE, false);
-            g.drawString(font, Component.translatable("gui.rpperks.profile.height"), listX + 6, py + 57, C_TEXT, false);
-            g.drawString(font, profHeight + "", listX + 52, py + 57, C_TITLE, false);
+        if (profileForm()) {
+            int py = listY + 8;
+            g.drawString(font, Component.translatable("gui.rpperks.profile.sex"), listX + 6, py + 4, C_TEXT, false);
+            g.drawString(font, Component.translatable("gui.rpperks.profile.age"), listX + 6, py + 26, C_TEXT, false);
+            g.drawString(font, String.valueOf(profAge), listX + 52, py + 26, C_TITLE, false);
+            g.drawString(font, Component.translatable("gui.rpperks.profile.height"), listX + 6, py + 48, C_TEXT, false);
+            g.drawString(font, profHeight + "", listX + 52, py + 48, C_TITLE, false);
             return;
         }
         if (tab == Tab.SKILLS) {
@@ -561,28 +639,37 @@ public class PerkScreen extends Screen {
             return;
         }
         List<Perk> rows = rows(data);
-        int contentH = rows.size() * ROW + 4;
+        boolean profRow = profileRow();
+        int count = rows.size() + (profRow ? 1 : 0);
+        int contentH = count * ROW + 4;
         int maxScroll = Math.max(0, contentH - listH);
         scroll = Mth.clamp(scroll, 0, maxScroll);
 
-        if (rows.isEmpty()) {
-            g.drawCenteredString(font, Component.translatable("gui.rpperks.empty"), listX + LIST_W / 2, listY + 12, C_DIM);
+        if (count == 0) {
+            g.drawCenteredString(font, Component.translatable("gui.rpperks.empty"), listX + listW / 2, listY + 12, C_DIM);
             return;
         }
 
-        g.enableScissor(listX, listY, listX + LIST_W, listY + listH);
+        g.enableScissor(listX, listY, listX + listW, listY + listH);
         int y = listY + 2 - (int) scroll;
+        if (profRow) {
+            boolean hover = inList(mouseX, mouseY) && mouseY >= y && mouseY < y + ROW;
+            if (profileSelected) g.fill(listX + 1, y, listX + listW - 1, y + ROW, C_SELECTED);
+            else if (hover) g.fill(listX + 1, y, listX + listW - 1, y + ROW, C_HOVER);
+            g.drawString(font, "§6" + Component.translatable("gui.rpperks.profile.row").getString(), listX + 4, y + 3, C_TEXT, false);
+            y += ROW;
+        }
         for (Perk perk : rows) {
             if (y + ROW > listY && y < listY + listH) {
                 boolean hover = inList(mouseX, mouseY) && mouseY >= y && mouseY < y + ROW;
-                if (perk == selected) g.fill(listX + 1, y, listX + LIST_W - 1, y + ROW, C_SELECTED);
-                else if (hover) g.fill(listX + 1, y, listX + LIST_W - 1, y + ROW, C_HOVER);
+                if (perk == selected && !profileSelected) g.fill(listX + 1, y, listX + listW - 1, y + ROW, C_SELECTED);
+                else if (hover) g.fill(listX + 1, y, listX + listW - 1, y + ROW, C_HOVER);
 
                 boolean owned = data.owns(perk);
                 boolean available = owned || adminMode || PerkRules.whyCannotTake(data, perk, canSeeHidden) == null;
 
                 String cost = costLabel(perk);
-                int costX = listX + LIST_W - 8 - font.width(cost);
+                int costX = listX + listW - 8 - font.width(cost);
 
                 String name = Component.translatable(perk.getNameKey()).getString();
                 if (!available) name = "§8" + ChatFormatting.stripFormatting(name);
@@ -600,7 +687,7 @@ public class PerkScreen extends Screen {
         if (maxScroll > 0) {
             int barH = Math.max(12, listH * listH / contentH);
             int barY = listY + (int) ((listH - barH) * (scroll / maxScroll));
-            g.fill(listX + LIST_W - 3, barY, listX + LIST_W - 1, barY + barH, C_DIM);
+            g.fill(listX + listW - 3, barY, listX + listW - 1, barY + barH, C_DIM);
         }
     }
 
@@ -614,15 +701,15 @@ public class PerkScreen extends Screen {
         int contentH = skills.length * SKILL_ROW + 4;
         int maxScroll = Math.max(0, contentH - listH);
         scroll = Mth.clamp(scroll, 0, maxScroll);
-        g.enableScissor(listX, listY, listX + LIST_W, listY + listH);
+        g.enableScissor(listX, listY, listX + listW, listY + listH);
         int y = listY + 2 - (int) scroll;
         for (var s : skills) {
             float[] v = data.getClientSkills().get(s.key());
             int lvl = v != null ? (int) v[0] : 0;
             float frac = v != null ? v[1] : 0f;
             boolean hover = inList(mouseX, mouseY) && mouseY >= y && mouseY < y + SKILL_ROW;
-            if (s == selectedSkill) g.fill(listX + 1, y, listX + LIST_W - 1, y + SKILL_ROW, C_SELECTED);
-            else if (hover) g.fill(listX + 1, y, listX + LIST_W - 1, y + SKILL_ROW, C_HOVER);
+            if (s == selectedSkill) g.fill(listX + 1, y, listX + listW - 1, y + SKILL_ROW, C_SELECTED);
+            else if (hover) g.fill(listX + 1, y, listX + listW - 1, y + SKILL_ROW, C_HOVER);
             g.drawString(font, Component.translatable(s.nameKey()), listX + 4, y + 3, C_TEXT, false);
             String l = String.valueOf(lvl);
             int lvlColor = lvl >= 7 ? C_GOOD : lvl <= 1 ? C_BAD : C_TITLE;
@@ -633,9 +720,9 @@ public class PerkScreen extends Screen {
                 int mid = (minusX() + SKILL_BTN + plusX()) / 2;
                 g.drawString(font, l, mid - font.width(l) / 2, y + 3, lvlColor, false);
             } else {
-                g.drawString(font, l, listX + LIST_W - 8 - font.width(l), y + 3, lvlColor, false);
+                g.drawString(font, l, listX + listW - 8 - font.width(l), y + 3, lvlColor, false);
             }
-            int bx = listX + 4, bw = LIST_W - 12, by = y + 15;
+            int bx = listX + 4, bw = listW - 12, by = y + 15;
             g.fill(bx, by, bx + bw, by + 4, 0xFF2A2E36);
             int filled = (int) (bw * Math.min(10, lvl + (lvl >= 10 ? 0 : frac)) / 10f);
             g.fill(bx, by, bx + filled, by + 4, 0xFFD4A537);
@@ -652,7 +739,7 @@ public class PerkScreen extends Screen {
     private static final int SKILL_BTN = 11;
 
     private int plusX() {
-        return listX + LIST_W - 6 - SKILL_BTN;
+        return listX + listW - 6 - SKILL_BTN;
     }
 
     private int minusX() {
@@ -671,118 +758,133 @@ public class PerkScreen extends Screen {
                 net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
     }
 
-    private void renderSkillInfo(GuiGraphics g, PlayerPerks data, int x, int y, int w) {
+    // ---------- Описание справа: строки с прокруткой ----------
+
+    private record Line(FormattedCharSequence text, int color, int height) {}
+
+    private final List<Line> content = new ArrayList<>();
+
+    private void text(Component c, int color, int w) {
+        for (FormattedCharSequence line : font.split(c, w)) content.add(new Line(line, color, 10));
+    }
+
+    private void line(Component c, int color, int height) {
+        content.add(new Line(c.getVisualOrderText(), color, height));
+    }
+
+    private void gap(int h) {
+        content.add(new Line(FormattedCharSequence.EMPTY, 0, h));
+    }
+
+    /** Нарисовать собранные строки между {@code y0} и {@code bottom}; не влезают — прокрутка колесом. */
+    private void drawContent(GuiGraphics g, int x, int y0, int bottom) {
+        int total = 0;
+        for (Line l : content) total += l.height;
+        int max = Math.max(0, total - (bottom - y0));
+        infoScroll = Mth.clamp(infoScroll, 0, max);
+        g.enableScissor(infoX, y0, infoX + infoW, bottom);
+        int y = y0 - (int) infoScroll;
+        for (Line l : content) {
+            if (y + l.height > y0 && y < bottom) g.drawString(font, l.text, x, y, l.color, false);
+            y += l.height;
+        }
+        g.disableScissor();
+        if (max > 0) {
+            int h = bottom - y0;
+            int barH = Math.max(10, h * h / total);
+            int barY = y0 + (int) ((h - barH) * (infoScroll / max));
+            g.fill(infoX + infoW - 3, barY, infoX + infoW - 1, barY + barH, C_DIM);
+        }
+        content.clear();
+    }
+
+    private void renderSkillInfo(PlayerPerks data, int w) {
         if (selectedSkill == null) {
-            for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.skills.hint"), w)) {
-                g.drawString(font, line, x, y, C_DIM, false);
-                y += 10;
-            }
+            text(Component.translatable("gui.rpperks.skills.hint"), C_DIM, w);
             if (adminMode) {
-                y += 4;
-                for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.skills.admin_hint"), w)) {
-                    g.drawString(font, line, x, y, C_WARN, false);
-                    y += 10;
-                }
+                gap(4);
+                text(Component.translatable("gui.rpperks.skills.admin_hint"), C_WARN, w);
             }
             if (!faygolover.rpperks.Config.get(faygolover.rpperks.Config.SKILL_GROWTH)) {
-                y += 4;
-                for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.skills.growth_off"), w)) {
-                    g.drawString(font, line, x, y, C_WARN, false);
-                    y += 10;
-                }
+                gap(4);
+                text(Component.translatable("gui.rpperks.skills.growth_off"), C_WARN, w);
             }
             return;
         }
         var s = selectedSkill;
         float[] v = data.getClientSkills().get(s.key());
         int lvl = v != null ? (int) v[0] : 0;
-        g.drawString(font, Component.translatable(s.nameKey()), x, y, C_TITLE, false);
-        y += 12;
+        line(Component.translatable(s.nameKey()), C_TITLE, 12);
         String src = v == null ? "trained" : switch ((int) v[2]) { case 1 -> "perk"; case 2 -> "gm"; default -> "trained"; };
-        g.drawString(font, Component.translatable("gui.rpperks.skills.level", lvl).append(" · ")
-                .append(Component.translatable("gui.rpperks.skills.source." + src)), x, y, C_TEXT, false);
-        y += 12;
-        if (v != null && lvl < 10) {
-            g.drawString(font, (int) (v[1] * 100) + "%", x, y, C_DIM, false);
-            y += 12;
-        } else if (lvl >= 10) {
-            g.drawString(font, Component.translatable("gui.rpperks.skills.max"), x, y, C_GOOD, false);
-            y += 12;
+        line(Component.translatable("gui.rpperks.skills.level", lvl).append(" · ")
+                .append(Component.translatable("gui.rpperks.skills.source." + src)), C_TEXT, 12);
+        if (v != null && lvl < 10) line(Component.literal((int) (v[1] * 100) + "%"), C_DIM, 12);
+        else if (lvl >= 10) line(Component.translatable("gui.rpperks.skills.max"), C_GOOD, 12);
+        gap(4);
+        text(Component.translatable(s.descKey()), C_DIM, w);
+    }
+
+    /** Анкета (строка во «Взятых»): значения и текущий вес. */
+    private void renderProfileInfo(int w) {
+        BodyProfile p = shownProfile();
+        line(Component.translatable("gui.rpperks.profile.row"), C_TITLE, 14);
+        line(Component.translatable("gui.rpperks.profile.sex_label", Component.translatable("rpcore.profile.sex." + p.sex().id())), C_TEXT, 12);
+        line(Component.translatable("gui.rpperks.profile.age_label", p.age()), C_TEXT, 12);
+        line(Component.translatable("gui.rpperks.profile.height_label", (int) Math.round(p.heightCm())), C_TEXT, 12);
+        double kg = ClientPerkData.targetWeightKg;
+        if (Double.isFinite(kg)) {
+            line(Component.translatable("gui.rpperks.profile.weight_label", Component.translatable("gui.rpperks.profile.weight_value",
+                    String.format(java.util.Locale.ROOT, "%.1f", kg))), C_TEXT, 12);
         }
-        if (v != null && v.length > 4 && lvl < 10) {
-            float speed = v[4];
-            int color = speed > 1.001f ? C_GOOD : speed < 0.999f ? C_BAD : C_DIM;
-            g.drawString(font, Component.translatable("gui.rpperks.skills.speed", String.format(java.util.Locale.ROOT, "%.2f", speed)), x, y, color, false);
-            y += 12;
-        }
-        y += 4;
-        for (FormattedCharSequence line : font.split(Component.translatable(s.descKey()), w)) {
-            g.drawString(font, line, x, y, C_DIM, false);
-            y += 10;
+        if (!adminMode) {
+            gap(6);
+            text(Component.translatable("gui.rpperks.profile.gm_only"), C_DIM, w);
         }
     }
 
     private void renderInfo(GuiGraphics g, PlayerPerks data) {
         int x = infoX + 6;
         int w = infoW - 12;
-        int y = infoY + 6;
+        int y0 = infoY + 6;
+        int bottom = infoY + infoH - 4;
+        if (profileForm()) {
+            text(Component.translatable(builtProfileOnly ? "gui.rpperks.profile.first" : "gui.rpperks.profile.admin_hint"), C_TEXT, w);
+            gap(6);
+            text(Component.translatable("gui.rpperks.profile.hint"), C_DIM, w);
+            drawContent(g, x, y0, bottom);
+            return;
+        }
         if (tab == Tab.SKILLS) {
-            renderSkillInfo(g, data, x, y, w);
+            renderSkillInfo(data, w);
+            drawContent(g, x, y0, actionButton.visible ? actionButton.getY() - 2 : bottom);
             return;
         }
-        if (tab == Tab.PROFILE) {
-            boolean locked = ownProfile().filled();
-            for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.profile.hint"), w)) {
-                g.drawString(font, line, x, y, C_DIM, false);
-                y += 10;
-            }
-            y += 6;
-            for (FormattedCharSequence line : font.split(Component.translatable(locked
-                    ? "gui.rpperks.profile.locked" : "gui.rpperks.profile.once"), w)) {
-                g.drawString(font, line, x, y, locked ? C_GOOD : C_WARN, false);
-                y += 10;
-            }
+        if (profileSelected) {
+            renderProfileInfo(w);
+            drawContent(g, x, y0, bottom);
             return;
         }
-
         if (selected == null) {
-            for (FormattedCharSequence line : font.split(Component.translatable(adminMode
-                    ? "gui.rpperks.select_hint_admin" : "gui.rpperks.select_hint"), w)) {
-                g.drawString(font, line, x, y, C_DIM, false);
-                y += 10;
-            }
+            text(Component.translatable(adminMode ? "gui.rpperks.select_hint_admin" : "gui.rpperks.select_hint"), C_DIM, w);
+            drawContent(g, x, y0, bottom);
             return;
         }
         Perk perk = selected;
         boolean owned = data.owns(perk);
 
-        // Название и цена
-        g.drawString(font, Component.translatable(perk.getNameKey()), x, y, C_TEXT, false);
-        y += 12;
+        // Название, цена, описание, несовместимости — прокручиваются
+        line(Component.translatable(perk.getNameKey()), C_TEXT, 12);
         Component tabName = Component.translatable("gui.rpperks.tab." + perk.getCategory().getId());
-        Component meta = Component.translatable(perk.isPositive() ? "gui.rpperks.cost.positive" : "gui.rpperks.cost.negative",
-                tabName, perk.getCost());
-        g.drawString(font, meta, x, y, C_DIM, false);
-        y += 14;
-
-        // Описание
-        for (FormattedCharSequence line : font.split(Component.translatable(perk.getDescKey()), w)) {
-            g.drawString(font, line, x, y, C_TEXT, false);
-            y += 10;
-        }
-        y += 4;
-
-        // Несовместимости
+        line(Component.translatable(perk.isPositive() ? "gui.rpperks.cost.positive" : "gui.rpperks.cost.negative",
+                tabName, perk.getCost()), C_DIM, 14);
+        text(Component.translatable(perk.getDescKey()), C_TEXT, w);
         Set<Perk> conflicts = Config.getConflicts(perk);
         if (!conflicts.isEmpty()) {
-            Component list = joinNames(conflicts);
-            for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.conflicts", list), w)) {
-                g.drawString(font, line, x, y, C_WARN, false);
-                y += 10;
-            }
+            gap(4);
+            text(Component.translatable("gui.rpperks.conflicts", joinNames(conflicts)), C_WARN, w);
         }
 
-        // Статус над кнопкой
+        // Статус над кнопкой — на месте
         List<Status> status = new ArrayList<>();
         if (owned && perk == Perk.CAFFEINE_ADDICTION && !data.isAdmin()) {
             int remaining = Config.caffeineWithdrawalTicks() - data.getCaffeineTimer();
@@ -814,12 +916,13 @@ public class PerkScreen extends Screen {
         List<FormattedCharSequence> lines = new ArrayList<>();
         List<Integer> colors = new ArrayList<>();
         for (Status s : status) {
-            for (FormattedCharSequence line : font.split(s.text, w)) {
-                lines.add(line);
+            for (FormattedCharSequence l : font.split(s.text, w)) {
+                lines.add(l);
                 colors.add(s.color);
             }
         }
-        int sy = Math.max(y + 2, infoY + infoH - 26 - lines.size() * 10);
+        int sy = infoY + infoH - BTN - 8 - lines.size() * 10;
+        drawContent(g, x, y0, Math.max(y0 + 20, sy - 4));
         for (int i = 0; i < lines.size(); i++) {
             g.drawString(font, lines.get(i), x, sy + i * 10, colors.get(i), false);
         }
@@ -828,21 +931,22 @@ public class PerkScreen extends Screen {
     private record Status(Component text, int color) {}
 
     private void renderBottom(GuiGraphics g, PlayerPerks data) {
-        int by = bottomY + 6;
+        if (builtProfileOnly) return;
+        int by = bottomY + 4;
         if (!adminMode) {
-            int hx = left + PAD + 150 + 8;
-            int hy = by;
-            for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.hint"), left + WIDTH - PAD - hx)) {
+            int hx = left + PAD + 140 + 8;
+            int hy = by - 1;
+            for (FormattedCharSequence line : font.split(Component.translatable("gui.rpperks.hint"), left + panelW - PAD - hx)) {
                 g.drawString(font, line, hx, hy, C_DIM, false);
-                hy += 10;
+                hy += 9;
             }
             return;
         }
-        int textY = by + 5;
+        int textY = by + 4;
         g.drawString(font, Component.translatable("gui.rpperks.label.points"), left + PAD, textY, C_TEXT, false);
         drawCentered(g, (data.getPoints() < 0 ? "§c" : "§e") + data.getPoints(), left + 130, textY);
 
-        int by2 = by + 22 + 5;
+        int by2 = by + 20 + 4;
         g.drawString(font, Component.translatable("gui.rpperks.label.refuse"), left + PAD, by2, C_TEXT, false);
         drawCentered(g, "§f" + data.getRefuseTokens(), left + 93, by2);
         g.drawString(font, Component.translatable("gui.rpperks.label.reset"), left + 136, by2, C_TEXT, false);

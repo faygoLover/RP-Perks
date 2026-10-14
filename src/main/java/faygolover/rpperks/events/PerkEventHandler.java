@@ -277,7 +277,7 @@ public final class PerkEventHandler {
             if (!targetId.equals(id)) return;
             ServerPlayer admin = player.server.getPlayerList().getPlayer(adminId);
             if (admin != null) {
-                NetworkHandler.sendToPlayer(admin, OpenPerkScreenPacket.of(false, true, id, player.getScoreboardName(), true, data));
+                NetworkHandler.sendToPlayer(admin, OpenPerkScreenPacket.of(false, true, player, true, data));
             }
         });
     }
@@ -291,8 +291,8 @@ public final class PerkEventHandler {
     public static void openSelfScreen(ServerPlayer player) {
         player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
             syncToClient(player, data);
-            NetworkHandler.sendToPlayer(player, OpenPerkScreenPacket.of(true, false, player.getUUID(),
-                    player.getScoreboardName(), canSeeHidden(player), data));
+            // Своё окно одинаковое у игрока и ГМа: служебные перки и анкета других — только в /rpperks admin.
+            NetworkHandler.sendToPlayer(player, OpenPerkScreenPacket.of(true, false, player, false, data));
         });
     }
 
@@ -300,8 +300,7 @@ public final class PerkEventHandler {
     public static void openAdminScreen(ServerPlayer admin, ServerPlayer target) {
         target.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
             ADMIN_SCREENS.put(admin.getUUID(), target.getUUID());
-            NetworkHandler.sendToPlayer(admin, OpenPerkScreenPacket.of(true, true, target.getUUID(),
-                    target.getScoreboardName(), true, data));
+            NetworkHandler.sendToPlayer(admin, OpenPerkScreenPacket.of(true, true, target, true, data));
         });
     }
 }

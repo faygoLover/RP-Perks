@@ -18,11 +18,16 @@ public final class ClientPerkData {
     /** Снимок данных игрока, открытого в админском окне. */
     @Nullable public static volatile PlayerPerks adminTarget = null;
     @Nullable public static volatile UUID adminTargetId = null;
+    /** Анкета и вес игрока из последнего открытия окна (своего или админского). */
+    public static volatile faygolover.rpcore.api.BodyProfile targetProfile = faygolover.rpcore.api.BodyProfile.DEFAULT;
+    public static volatile double targetWeightKg = Double.NaN;
 
     /** Сброс при выходе с сервера, чтобы данные не «переехали» на другой сервер или в одиночную игру. */
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         adminTarget = null;
         adminTargetId = null;
+        targetProfile = faygolover.rpcore.api.BodyProfile.DEFAULT;
+        targetWeightKg = Double.NaN;
     }
 }

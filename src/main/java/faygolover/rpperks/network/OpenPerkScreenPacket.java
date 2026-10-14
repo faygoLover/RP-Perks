@@ -2,7 +2,9 @@ package faygolover.rpperks.network;
 
 import faygolover.rpperks.capability.PlayerPerks;
 import faygolover.rpperks.client.ClientPacketHandler;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
@@ -23,9 +25,13 @@ public class OpenPerkScreenPacket {
     public final SyncPerksPacket snapshot;
     /** Навыки игрока для вкладки «Навыки» админского окна. */
     public final SyncSkillsPacket skills;
+    /** Анкета тела игрока (RP Core) и его текущий вес, кг (NaN — веса не ведёт ни один мод). */
+    public final CompoundTag profile;
+    public final double weightKg;
 
     public OpenPerkScreenPacket(boolean open, boolean adminMode, UUID targetId, String targetName,
-                                boolean canSeeHidden, SyncPerksPacket snapshot, SyncSkillsPacket skills) {
+                                boolean canSeeHidden, SyncPerksPacket snapshot, SyncSkillsPacket skills,
+                                CompoundTag profile, double weightKg) {
         this.open = open;
         this.adminMode = adminMode;
         this.targetId = targetId;
@@ -33,12 +39,15 @@ public class OpenPerkScreenPacket {
         this.canSeeHidden = canSeeHidden;
         this.snapshot = snapshot;
         this.skills = skills;
+        this.profile = profile;
+        this.weightKg = weightKg;
     }
 
-    public static OpenPerkScreenPacket of(boolean open, boolean adminMode, UUID targetId, String targetName,
+    public static OpenPerkScreenPacket of(boolean open, boolean adminMode, ServerPlayer target,
                                           boolean canSeeHidden, PlayerPerks data) {
-        return new OpenPerkScreenPacket(open, adminMode, targetId, targetName, canSeeHidden, SyncPerksPacket.of(data),
-                SyncSkillsPacket.of(data));
+        return new OpenPerkScreenPacket(open, adminMode, target.getUUID(), target.getScoreboardName(), canSeeHidden,
+                SyncPerksPacket.of(data), SyncSkillsPacket.of(data),
+                faygolover.rpcore.api.RpCoreAPI.profile(target).save(), faygolover.rpcore.api.RpCoreAPI.weightKg(target));
     }
 
     public static void encode(OpenPerkScreenPacket msg, FriendlyByteBuf buf) {
@@ -49,6 +58,8 @@ public class OpenPerkScreenPacket {
         buf.writeBoolean(msg.canSeeHidden);
         SyncPerksPacket.encode(msg.snapshot, buf);
         SyncSkillsPacket.encode(msg.skills, buf);
+        buf.writeNbt(msg.profile);
+        buf.writeDouble(msg.weightKg);
     }
 
     public static OpenPerkScreenPacket decode(FriendlyByteBuf buf) {
@@ -59,7 +70,10 @@ public class OpenPerkScreenPacket {
         boolean canSeeHidden = buf.readBoolean();
         SyncPerksPacket snapshot = SyncPerksPacket.decode(buf);
         SyncSkillsPacket skills = SyncSkillsPacket.decode(buf);
-        return new OpenPerkScreenPacket(open, admin, target, name, canSeeHidden, snapshot, skills);
+        CompoundTag profile = buf.readNbt();
+        double weight = buf.readDouble();
+        return new OpenPerkScreenPacket(open, admin, target, name, canSeeHidden, snapshot, skills,
+                profile == null ? new CompoundTag() : profile, weight);
     }
 
     public static void handle(OpenPerkScreenPacket msg, Supplier<NetworkEvent.Context> ctx) {

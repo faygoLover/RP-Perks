@@ -25,6 +25,10 @@ public final class ClientPacketHandler {
     }
 
     public static void handleScreen(OpenPerkScreenPacket msg) {
+        if (msg.open || msg.targetId.equals(ClientPerkData.adminTargetId)) {
+            ClientPerkData.targetProfile = faygolover.rpcore.api.BodyProfile.load(msg.profile);
+            ClientPerkData.targetWeightKg = msg.weightKg;
+        }
         if (msg.adminMode) {
             // Обновление для другого игрока, чем открыт сейчас, не нужно (админ уже переключился)
             if (!msg.open && !msg.targetId.equals(ClientPerkData.adminTargetId)) return;

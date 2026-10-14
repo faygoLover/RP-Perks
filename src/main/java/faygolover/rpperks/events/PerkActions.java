@@ -137,6 +137,15 @@ public final class PerkActions {
                 log = level < 0 ? "снял уровень ГМа навыка " + skill.key()
                         : "поставил навык " + skill.key() + " на " + level;
             }
+            case ADMIN_PROFILE -> {
+                // Анкету после сохранения правит только ГМ (как /rpcore profile): пол, возраст, рост.
+                var sexes = faygolover.rpcore.api.BodyProfile.Sex.values();
+                int sex = msg.amount & 3, age = (msg.amount >> 2) & 127, height = msg.amount >> 9;
+                if (sex >= sexes.length) return;
+                var prof = new faygolover.rpcore.api.BodyProfile(sexes[sex], age, height, true);
+                faygolover.rpcore.api.RpCoreAPI.setProfile(target, prof);
+                log = "изменил анкету: " + prof.sex().id() + ", " + prof.age() + " лет, " + (int) prof.heightCm() + " см";
+            }
             default -> {
                 return;
             }
