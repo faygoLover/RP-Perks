@@ -41,6 +41,9 @@ public final class CoreTraits implements TraitProvider {
         m.put(RpIds.WEAK_IMMUNITY, Set.of(Perk.HOMEBODY));
         m.put(RpIds.BRAVE, Set.of(Perk.BRAVE, Perk.STRONG_WILLED));
         m.put(RpIds.COWARD, Set.of(Perk.COWARD));
+        // Психика (RP Psyche, Core 0.7.1)
+        m.put(RpIds.STRONG_WILLED, Set.of(Perk.STRONG_WILLED));
+        m.put(RpIds.SUGGESTIBLE, Set.of(Perk.SUGGESTIBLE));
         m.put(RpIds.DIABETIC, Set.of(Perk.DIABETIC));
         m.put(RpIds.SMOKER, Set.of(Perk.SMOKER));
         m.put(RpIds.ALCOHOLIC, Set.of(Perk.ALCOHOLIC));
