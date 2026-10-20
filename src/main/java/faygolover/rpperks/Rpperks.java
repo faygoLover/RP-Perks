@@ -35,6 +35,9 @@ public class Rpperks {
         // RP Core: Perks ведёт навыки семейства и отвечает на вопросы о чертах (Диабетик, Курильщик…).
         event.enqueueWork(() -> {
             faygolover.rpcore.api.RpCoreAPI.registerProvider(new faygolover.rpperks.compat.CoreTraits());
+            // Слоты инвентаря по особенностям — источник поправок для RP Inventory (Core 0.7.0).
+            faygolover.rpcore.api.RpCoreAPI.registerInventoryModifier(
+                    new net.minecraft.resources.ResourceLocation(MODID, "perks"), new faygolover.rpperks.compat.CoreInventory());
             faygolover.rpcore.api.RpCoreAPI.registerModule(MODID, "перки, навыки (оружие, ближний бой, Медицина, Сила, Телосложение…) и черты");
             faygolover.rpperks.commands.PerkCommands.describe();
             // Оружейные навыки — только если стоит TaCZ (класс с его API грузится лишь тогда).

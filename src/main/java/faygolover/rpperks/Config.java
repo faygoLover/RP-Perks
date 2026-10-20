@@ -30,7 +30,8 @@ public final class Config {
 
     // ---------- [general] ----------
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> HIDDEN_PERKS;
-    public static final ForgeConfigSpec.ConfigValue<String> INVENTORY_COMMAND;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> SERVICE_PERKS;
+    public static final ForgeConfigSpec.IntValue DEFAULTS_VERSION;
 
     // ---------- [selection] ----------
     public static final ForgeConfigSpec.BooleanValue PLAYERS_CAN_SELECT;
@@ -71,7 +72,6 @@ public final class Config {
     public static final ForgeConfigSpec.DoubleValue CLUMSY_RUNNER_CHANCE_PERCENT;
     public static final ForgeConfigSpec.IntValue CLUMSY_RUNNER_COOLDOWN_MINUTES;
 
-    public static final ForgeConfigSpec.IntValue ADMIN_INVENTORY_SLOTS;
 
     // ---------- [skill_system] ----------
     public static final ForgeConfigSpec.BooleanValue SKILL_GROWTH;
@@ -128,6 +128,7 @@ public final class Config {
     // ---------- Разобранные значения (обновляются при загрузке/перезагрузке файла) ----------
     private static volatile Set<ResourceLocation> caffeineItems = Set.of();
     private static volatile Set<Perk> hiddenPerks = EnumSet.of(Perk.ADMIN);
+    private static volatile Set<Perk> servicePerks;
     private static volatile Map<Perk, Set<Perk>> conflicts = Map.of();
     private static volatile Map<Perk, Map<faygolover.rpperks.skill.SkillDef, Integer>> perkSkills = Map.of();
 
@@ -164,10 +165,14 @@ public final class Config {
                         " Указываются ID перков, например: [\"admin\", \"nerd_rage\"]")
                 .defineListAllowEmpty(List.of("hidden_perks"), List.of("admin"), Config::isString);
 
-        INVENTORY_COMMAND = B.comment(
-                        " Команда, которой выставляется число слотов инвентаря.",
-                        " {player} — ник игрока, {value} — число слотов. Пустая строка — не выполнять.")
-                .define("inventory_slots_command", "inventory_slots set_available {player} {value}");
+        SERVICE_PERKS = B.comment(
+                        " Перки, которые считаются служебными: вкладка «Служебные» у ГМа, взять самому нельзя,",
+                        " выдаёт только администрация (как «Админ»). Указываются ID, например: [\"solar_powered\"]")
+                .defineListAllowEmpty(List.of("service_perks"), List.of(), Config::isString);
+
+        DEFAULTS_VERSION = B.comment(
+                        " Служебное: до какой версии уже обновлены значения по умолчанию. Не меняйте.")
+                .defineInRange("defaults_version", 2, 0, 1000);
         B.pop();
 
         // =====================================================================
@@ -561,8 +566,6 @@ public final class Config {
         beginPerk(Perk.ADMIN,
                 "Снимает все ограничения: ванильные характеристики, выносливость не тратится,",
                 " полный инвентарь. Действие всех остальных перков приостановлено, пока Админ активен.");
-        ADMIN_INVENTORY_SLOTS = B.comment(" Число слотов инвентаря в режиме Админа")
-                .defineInRange("inventory_slots", 36, 0, 100);
         B.pop();
         B.pop();
 
@@ -683,7 +686,11 @@ public final class Config {
      * (как с таблицами стрельбы). Возвращает, сколько значений обновлено.
      */
     private static int upgradeDefaults2() {
-        int n = 0;
+        // Один раз: иначе своё значение, совпавшее со старым по умолчанию, сбрасывалось при каждом запуске.
+        // Новые конфиги и уже обновлённые получают defaults_version = 2 по умолчанию и сюда не заходят.
+        if (DEFAULTS_VERSION.get() >= 2) return 0;
+        DEFAULTS_VERSION.set(2);
+        int n = 1;
         for (var e : OLD_COSTS.entrySet()) {
             ForgeConfigSpec.IntValue v = COSTS.get(e.getKey());
             if (v != null && v.get().equals(e.getValue()) && e.getKey().getDefaultCost() != e.getValue()) {
@@ -776,6 +783,12 @@ public final class Config {
         return conflicts.getOrDefault(perk, Set.of());
     }
 
+    /** Перк назначен служебным в конфиге (service_perks). */
+    public static boolean isService(Perk perk) {
+        Set<Perk> s = servicePerks;  // null, пока конфиг не загружен (и при построении самого конфига)
+        return s != null && s.contains(perk);
+    }
+
     public static boolean isHidden(Perk perk) {
         return hiddenPerks.contains(perk);
     }
@@ -834,6 +847,14 @@ public final class Config {
                     () -> Rpperks.LOGGER.error("[RP Perks] Неизвестный перк в hidden_perks: {}", entry));
         }
         hiddenPerks = hidden;
+
+        // Служебные из конфига
+        Set<Perk> service = EnumSet.noneOf(Perk.class);
+        for (String entry : SERVICE_PERKS.get()) {
+            Perk.fromId(entry.trim()).ifPresentOrElse(service::add,
+                    () -> Rpperks.LOGGER.error("[RP Perks] Неизвестный перк в service_perks: {}", entry));
+        }
+        servicePerks = service;
 
         // Несовместимости
         Map<Perk, Set<Perk>> map = new EnumMap<>(Perk.class);

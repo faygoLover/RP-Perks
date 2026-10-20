@@ -66,8 +66,8 @@ public enum Stat {
 
     THERMAL_RESISTANCE("thermal_resistance", "Legendary Survival Overhaul: терморезистентность", "значение LSO",
             2.0, -100.0, 100.0, "legendarysurvivaloverhaul", "thermal_resistance"),
-    INVENTORY_SLOTS("inventory_slots", "Доступные слоты инвентаря (через команду inventory_slots_command)", "36",
-            18.0, 0.0, 100.0, Kind.COMMAND);
+    INVENTORY_SLOTS("inventory_slots", "Слоты инвентаря (хотбар + хранилище); отличие от базы — прибавка к хранилищу RP Inventory", "18",
+            18.0, 0.0, 100.0, Kind.CUSTOM);
 
     /** Атрибут выносливости через розетку RP Core (null — мода выносливости нет). */
     private static Supplier<Attribute> stamina(StaminaProvider.Stat stat) {

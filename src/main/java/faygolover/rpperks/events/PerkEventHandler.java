@@ -137,6 +137,8 @@ public final class PerkEventHandler {
 
         syncToClient(player, data);
         faygolover.rpperks.skill.SkillService.sync(player);
+        // Слоты инвентаря (Организованный / Неорганизованный, Админ) — RP Inventory пересчитает сразу.
+        faygolover.rpcore.api.RpCoreAPI.inventoryChanged(player);
     }
 
     /** Итоговые значения всех характеристик игрока без учёта режима Админа. */
@@ -179,8 +181,7 @@ public final class PerkEventHandler {
             switch (stat.getKind()) {
                 case ATTRIBUTE -> setBase(player, stat.getAttribute(),
                         bodyHealth && stat == Stat.MAX_HEALTH ? vanillaBase(stat.getAttribute()) : value);
-                case COMMAND -> runStatCommand(player, stat, (int) Math.round(value));
-                case CUSTOM -> { /* обрабатывается в событиях */ }
+                case COMMAND, CUSTOM -> { /* обрабатывается в событиях; слоты инвентаря — compat.CoreInventory */ }
             }
         });
     }
@@ -193,35 +194,12 @@ public final class PerkEventHandler {
         }
         // Админ не тратит выносливость (если установлен rpstamina)
         setBase(player, Stat.STAMINA_COST.getAttribute(), 0.0);
-        runStatCommand(player, Stat.INVENTORY_SLOTS, Config.get(Config.ADMIN_INVENTORY_SLOTS));
     }
 
     /** Ванильное базовое значение атрибута игрока (или значение по умолчанию самого атрибута). */
     private static double vanillaBase(Attribute attribute) {
         AttributeSupplier supplier = DefaultAttributes.getSupplier(EntityType.PLAYER);
         return supplier.hasAttribute(attribute) ? supplier.getBaseValue(attribute) : attribute.getDefaultValue();
-    }
-
-    // ---------- Команды других модов ----------
-
-    private static void runStatCommand(ServerPlayer player, Stat stat, int value) {
-        String template = switch (stat) {
-            case INVENTORY_SLOTS -> Config.get(Config.INVENTORY_COMMAND);
-            default -> "";
-        };
-        if (template.isBlank()) return;
-        String command = template.replace("{player}", player.getScoreboardName()).replace("{value}", String.valueOf(value));
-        String root = command.trim().split(" ", 2)[0];
-        if (commandExists(player.server, root)) executeCommand(player.server, command);
-    }
-
-    private static boolean commandExists(MinecraftServer server, String root) {
-        return server.getCommands().getDispatcher().getRoot().getChild(root) != null;
-    }
-
-    private static void executeCommand(MinecraftServer server, String command) {
-        server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack().withPermission(4).withSuppressedOutput(), command);
     }
 
     // ---------- Атрибуты ----------

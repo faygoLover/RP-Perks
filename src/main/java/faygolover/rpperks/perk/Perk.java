@@ -161,7 +161,10 @@ public enum Perk {
     }
 
     public String getId() { return id; }
-    public Category getCategory() { return category; }
+    public Category getCategory() { return faygolover.rpperks.Config.isService(this) ? Category.SERVICE : category; }
+
+    /** Категория из кода, без учёта service_perks в конфиге. */
+    public Category getBaseCategory() { return category; }
     public int getDefaultCost() { return defaultCost; }
     /** Русское название — используется в комментариях конфига. */
     public String getTitle() { return title; }
