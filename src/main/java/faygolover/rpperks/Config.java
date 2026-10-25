@@ -518,8 +518,9 @@ public final class Config {
                 .defineInRange("speed_penalty_percent", 30.0, 0.0, 100.0);
         CAFFEINE_ATTACK_SPEED_PENALTY_PERCENT = B.comment(" Штраф к скорости атаки во время ломки, %")
                 .defineInRange("attack_speed_penalty_percent", 30.0, 0.0, 100.0);
-        CAFFEINE_ITEMS = B.comment(" ID предметов, которые снимают ломку (едят или пьют)")
-                .defineListAllowEmpty(List.of("caffeine_items"), List.of("minecraft:cookie"), Config::isString);
+        CAFFEINE_ITEMS = B.comment(" Дополнительно к общей базе RP Core (rpcore/consumables, \"caffeine\"): ID предметов, которые снимают ломку.",
+                        " Нужен, только если тело ведёт не RP Medicine — Medicine засчитывает кофеин только по базе Core")
+                .defineListAllowEmpty(List.of("caffeine_items"), List.of(), Config::isString);
         B.pop();
         rpPerk(Perk.ALCOHOL_ADDICT, "Алкоголик: без алкоголя — стресс, потом ломка (механика — RP Medicine, иначе РП)");
         rpPerk(Perk.SMOKER, "Курильщик: без курения настроение хуже, ломка (механика — RP Medicine, иначе РП)");

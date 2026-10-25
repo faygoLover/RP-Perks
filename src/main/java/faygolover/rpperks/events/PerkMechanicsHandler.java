@@ -293,9 +293,13 @@ public final class PerkMechanicsHandler {
         player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
             boolean changed = false;
 
-            // Кофеин снимает ломку
+            // Кофеин снимает ломку. Кофеин — по общей базе RP Core (и списку caffeine_items, если тело ведёт не RP Medicine:
+            // Medicine засчитывает только базу Core, поэтому при ней сообщение — только когда вещество правда засчитано).
             ResourceLocation id = ForgeRegistries.ITEMS.getKey(item.getItem());
-            if (id != null && Config.isCaffeineItem(id) && data.hasPerk(Perk.CAFFEINE_ADDICTION)) {
+            faygolover.rpcore.api.Consumables.Entry core = faygolover.rpcore.api.Consumables.forItem(item);
+            boolean bodyCaffeine = faygolover.rpcore.api.RpCoreAPI.bodyHandles(faygolover.rpcore.api.RpIds.BODY_CAFFEINE);
+            boolean caffeine = core != null && core.caffeine() > 0 || !bodyCaffeine && id != null && Config.isCaffeineItem(id);
+            if (caffeine && data.hasPerk(Perk.CAFFEINE_ADDICTION)) {
                 data.setCaffeineTimer(0);
                 player.sendSystemMessage(Component.translatable("message.rpperks.caffeine.consumed"));
                 changed = true;
