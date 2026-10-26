@@ -290,5 +290,14 @@
   "gui.rpperks.profile.gm_only": "Анкету меняет только ГМ.",
   "gui.rpperks.profile.first": "Сначала — анкета персонажа. Сохраняется один раз, потом откроются особенности.",
   "gui.rpperks.profile.admin_hint": "Анкета игрока. Поменяйте пол, возраст или рост и сохраните.",
-  "gui.rpperks.profile.admin_save": "Сохранить анкету игрока"
+  "gui.rpperks.profile.admin_save": "Сохранить анкету игрока",
+  "gui.rpperks.taste.favourite": "Любимое",
+  "gui.rpperks.taste.disliked": "Нелюбимое",
+  "gui.rpperks.taste.button": "Вкусы…",
+  "gui.rpperks.taste.back": "Назад",
+  "gui.rpperks.taste.save": "Сохранить вкусы",
+  "gui.rpperks.taste.need_pair": "Выберите и нелюбимое",
+  "gui.rpperks.taste.hint": "Вкусы — по виду еды или способу готовки. Необязательно, но выбрал любимое — выбери и нелюбимое. Любимое не приедается и радует, нелюбимое надоедает вдвое быстрее. Выбрать можно один раз, дальше меняет ГМ.",
+  "gui.rpperks.taste.fav_label": "Любимое: %s",
+  "gui.rpperks.taste.dis_label": "Нелюбимое: %s"
 }

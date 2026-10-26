@@ -116,6 +116,10 @@ public class PerkScreen extends Screen {
     private int profAge = BodyProfile.DEFAULT_AGE;
     private int profHeight = (int) BodyProfile.DEFAULT_HEIGHT;
     private boolean profLoaded;
+    /** Вкусы (часть анкеты, RP Core): выбор в форме анкеты или отдельной формой «Вкусы…» при уже заполненной анкете. */
+    private String tasteFav = "", tasteDis = "";
+    private boolean tasteOnly;
+    @Nullable private Button favButton, disButton, tasteButton;
 
     public PerkScreen(boolean adminMode, UUID targetId, String targetName, boolean canSeeHidden) {
         super(adminMode
@@ -159,7 +163,7 @@ public class PerkScreen extends Screen {
 
     /** Форма анкеты на экране: своя до сохранения или вкладка «Анкета» у админа. */
     private boolean profileForm() {
-        return builtProfileOnly || (adminMode && tab == Tab.PROFILE);
+        return builtProfileOnly || tasteOnly || (adminMode && tab == Tab.PROFILE);
     }
 
     private List<Tab> visibleTabs() {
@@ -245,7 +249,19 @@ public class PerkScreen extends Screen {
         profileButtons.clear();
         sexButton = null;
         saveProfileButton = null;
-        if (builtProfileOnly || adminMode) {
+        favButton = disButton = null;
+        if (builtProfileOnly || adminMode || tasteOnly) {
+            int bx = listX + listW - 6;
+            int py = listY + 8;
+            if (!adminMode && (builtProfileOnly || tasteOnly)) {
+                int ty = tasteOnly ? py : py + 66;
+                favButton = profileButton(Component.empty(), bx - 110, ty, 110, () -> tasteFav = nextTaste(tasteFav));
+                disButton = profileButton(Component.empty(), bx - 110, ty + 22, 110, () -> tasteDis = nextTaste(tasteDis));
+            }
+        }
+        if (tasteOnly) {
+            saveProfileButton = profileButton(Component.empty(), listX + 6, listY + 8 + 50, listW - 12, this::onSaveProfile);
+        } else if (builtProfileOnly || adminMode) {
             int bx = listX + listW - 6;
             int py = listY + 8;
             sexButton = profileButton(Component.empty(), bx - 90, py, 90, () -> profSex = nextSex(profSex));
@@ -257,18 +273,24 @@ public class PerkScreen extends Screen {
             profileButton(Component.literal("-1"), bx - 68, py + 44, 20, () -> profHeight -= 1);
             profileButton(Component.literal("+1"), bx - 42, py + 44, 20, () -> profHeight += 1);
             profileButton(Component.literal("+5"), bx - 20, py + 44, 20, () -> profHeight += 5);
-            saveProfileButton = profileButton(Component.empty(), listX + 6, py + 72, listW - 12, this::onSaveProfile);
+            saveProfileButton = profileButton(Component.empty(), listX + 6, adminMode ? py + 72 : py + 116, listW - 12, this::onSaveProfile);
             if (builtProfileOnly && !profLoaded) loadProfile(ownProfile());
         }
 
         resetButton = null;
         wipeButton = null;
         selectionButton = null;
+        tasteButton = null;
         int by = bottomY + 4;
         if (!adminMode) {
             if (!builtProfileOnly) {
                 resetButton = addRenderableWidget(Button.builder(Component.empty(), b -> onReset())
                         .bounds(left + PAD, by, 140, BTN).build());
+                // Вкусы ещё не выбраны — отдельная форма (анкета уже заполнена).
+                if (tasteOnly || !ownTaste().chosen()) {
+                    tasteButton = addRenderableWidget(Button.builder(Component.empty(), b -> toggleTaste())
+                            .bounds(left + panelW - PAD - 100, by, 100, BTN).build());
+                }
             }
         } else {
             // Ряд 1: баллы и очистка карточки
@@ -290,6 +312,25 @@ public class PerkScreen extends Screen {
                     .bounds(left + panelW - PAD - 120, by2, 120, BTN).build());
         }
         updateButtons();
+    }
+
+    private faygolover.rpcore.api.FoodTaste ownTaste() {
+        var mc = net.minecraft.client.Minecraft.getInstance();
+        return mc.player == null ? faygolover.rpcore.api.FoodTaste.NONE : faygolover.rpcore.api.RpCoreAPI.taste(mc.player);
+    }
+
+    /** Следующий вариант вкуса по кругу; первый — «не выбрано». */
+    private static String nextTaste(String v) {
+        List<String> opts = faygolover.rpcore.api.FoodTaste.options();
+        int i = opts.indexOf(v);
+        return i + 1 >= opts.size() ? "" : opts.get(i + 1);
+    }
+
+    private void toggleTaste() {
+        tasteOnly = !tasteOnly;
+        tasteFav = tasteDis = "";
+        pendingKey = null;
+        rebuildWidgets();
     }
 
     private Button profileButton(Component label, int x, int y, int w, Runnable action) {
@@ -330,8 +371,19 @@ public class PerkScreen extends Screen {
             playClick();
             return;
         }
+        if (!faygolover.rpcore.api.FoodTaste.validPair(tasteFav, tasteDis)) return;
+        if (tasteOnly) {
+            if (tasteFav.isEmpty() || !confirm("taste")) return;
+            faygolover.rpcore.api.RpCoreAPI.submitTaste(tasteFav, tasteDis);
+            playClick();
+            tasteOnly = false;
+            rebuildWidgets();
+            return;
+        }
         if (ownProfile().filled() || !confirm("profile")) return;
         faygolover.rpcore.api.RpCoreAPI.submitProfile(profSex, profAge, profHeight);
+        // Вкусы необязательны: не выбраны — выберет позже кнопкой «Вкусы…».
+        if (!tasteFav.isEmpty()) faygolover.rpcore.api.RpCoreAPI.submitTaste(tasteFav, tasteDis);
         playClick();
     }
 
@@ -368,10 +420,17 @@ public class PerkScreen extends Screen {
         boolean form = profileForm();
         for (Button b : profileButtons) b.visible = form;
         if (sexButton != null) sexButton.setMessage(Component.translatable("rpcore.profile.sex." + profSex.id()));
+        if (favButton != null) favButton.setMessage(Component.translatable(faygolover.rpcore.api.FoodTaste.langKey(tasteFav)));
+        if (disButton != null) disButton.setMessage(Component.translatable(faygolover.rpcore.api.FoodTaste.langKey(tasteDis)));
+        if (tasteButton != null) tasteButton.setMessage(Component.translatable(tasteOnly ? "gui.rpperks.taste.back" : "gui.rpperks.taste.button"));
         if (saveProfileButton != null) {
-            saveProfileButton.setMessage(isPending("profile")
+            boolean pairOk = adminMode || faygolover.rpcore.api.FoodTaste.validPair(tasteFav, tasteDis);
+            saveProfileButton.active = pairOk && (!tasteOnly || !tasteFav.isEmpty());
+            saveProfileButton.setMessage(isPending(tasteOnly ? "taste" : "profile")
                     ? Component.translatable("gui.rpperks.button.confirm")
-                    : Component.translatable(adminMode ? "gui.rpperks.profile.admin_save" : "gui.rpperks.profile.save"));
+                    : !pairOk ? Component.translatable("gui.rpperks.taste.need_pair")
+                    : Component.translatable(adminMode ? "gui.rpperks.profile.admin_save"
+                            : tasteOnly ? "gui.rpperks.taste.save" : "gui.rpperks.profile.save"));
         }
 
         if (blockButton != null) {
@@ -627,6 +686,12 @@ public class PerkScreen extends Screen {
     private void renderList(GuiGraphics g, PlayerPerks data, int mouseX, int mouseY) {
         if (profileForm()) {
             int py = listY + 8;
+            if (favButton != null) {
+                int ty = tasteOnly ? py : py + 66;
+                g.drawString(font, Component.translatable("gui.rpperks.taste.favourite"), listX + 6, ty + 4, C_TEXT, false);
+                g.drawString(font, Component.translatable("gui.rpperks.taste.disliked"), listX + 6, ty + 26, C_TEXT, false);
+            }
+            if (tasteOnly) return;
             g.drawString(font, Component.translatable("gui.rpperks.profile.sex"), listX + 6, py + 4, C_TEXT, false);
             g.drawString(font, Component.translatable("gui.rpperks.profile.age"), listX + 6, py + 26, C_TEXT, false);
             g.drawString(font, String.valueOf(profAge), listX + 52, py + 26, C_TITLE, false);
@@ -837,6 +902,11 @@ public class PerkScreen extends Screen {
                     String.format(java.util.Locale.ROOT, "%.1f", kg))), C_TEXT, 12);
         }
         if (!adminMode) {
+            faygolover.rpcore.api.FoodTaste t = ownTaste();
+            if (t.chosen()) {
+                line(Component.translatable("gui.rpperks.taste.fav_label", Component.translatable(faygolover.rpcore.api.FoodTaste.langKey(t.favourite()))), C_TEXT, 12);
+                line(Component.translatable("gui.rpperks.taste.dis_label", Component.translatable(faygolover.rpcore.api.FoodTaste.langKey(t.disliked()))), C_TEXT, 12);
+            }
             gap(6);
             text(Component.translatable("gui.rpperks.profile.gm_only"), C_DIM, w);
         }
@@ -848,9 +918,18 @@ public class PerkScreen extends Screen {
         int y0 = infoY + 6;
         int bottom = infoY + infoH - 4;
         if (profileForm()) {
+            if (tasteOnly) {
+                text(Component.translatable("gui.rpperks.taste.hint"), C_TEXT, w);
+                drawContent(g, x, y0, bottom);
+                return;
+            }
             text(Component.translatable(builtProfileOnly ? "gui.rpperks.profile.first" : "gui.rpperks.profile.admin_hint"), C_TEXT, w);
             gap(6);
             text(Component.translatable("gui.rpperks.profile.hint"), C_DIM, w);
+            if (builtProfileOnly) {
+                gap(6);
+                text(Component.translatable("gui.rpperks.taste.hint"), C_DIM, w);
+            }
             drawContent(g, x, y0, bottom);
             return;
         }

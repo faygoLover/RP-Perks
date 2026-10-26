@@ -290,5 +290,14 @@
   "gui.rpperks.profile.gm_only": "Only a GM can change the profile.",
   "gui.rpperks.profile.first": "First, the character profile. It is saved once, then traits open.",
   "gui.rpperks.profile.admin_hint": "The player's profile. Change sex, age or height and save.",
-  "gui.rpperks.profile.admin_save": "Save the player's profile"
+  "gui.rpperks.profile.admin_save": "Save the player's profile",
+  "gui.rpperks.taste.favourite": "Favourite",
+  "gui.rpperks.taste.disliked": "Disliked",
+  "gui.rpperks.taste.button": "Tastes…",
+  "gui.rpperks.taste.back": "Back",
+  "gui.rpperks.taste.save": "Save tastes",
+  "gui.rpperks.taste.need_pair": "Choose the disliked one too",
+  "gui.rpperks.taste.hint": "Tastes — a kind of food or a way of cooking. Optional, but choosing a favourite means choosing a disliked one too. The favourite never gets boring and cheers you up, the disliked gets boring twice as fast. You choose once; after that only a GM can change it.",
+  "gui.rpperks.taste.fav_label": "Favourite: %s",
+  "gui.rpperks.taste.dis_label": "Disliked: %s"
 }
