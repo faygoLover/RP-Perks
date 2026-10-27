@@ -360,7 +360,7 @@ public class PlayerPerks {
      * </ul>
      */
     private void migrateTo2(Map<String, Integer> raw) {
-        Set<String> revoke = Set.of("survivor", "tough", "fragile", "enduring", "weakling", "strongman", "wimp", "smoker");
+        Set<String> revoke = Set.of("survivor", "tough", "fragile", "enduring", "weakling", "strongman", "wimp", "smoker", "clean");
         // Сдвиг старта от купленного старого перка (старый обычный уровень — 4).
         Map<String, int[]> oldStart = Map.of("wimp", new int[]{0, -3}, "strongman", new int[]{0, 3},
                 "weakling", new int[]{1, -3}, "enduring", new int[]{1, 3}, "athlete", new int[]{1, 5});

@@ -215,6 +215,8 @@
   "perk.rpperks.gym_lover.desc": "Тренировки на 50 % полезнее, мышцы восстанавливаются вдвое быстрее.",
   "perk.rpperks.iron_stomach.name": "§aЖелезный желудок",
   "perk.rpperks.iron_stomach.desc": "Отравиться едой вдвое реже, переедание наступает позже.",
+  "perk.rpperks.clean.name": "§aЧистюля",
+  "perk.rpperks.clean.desc": "Моет руки и продукты: вдвое реже травится сам, а его блюда вдвое реже травят других.",
   "perk.rpperks.light_eater.name": "§aМалоежка",
   "perk.rpperks.light_eater.desc": "Голод медленнее, но желудок меньше.",
   "perk.rpperks.low_thirst.name": "§aМало пьёт",

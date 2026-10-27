@@ -215,6 +215,8 @@
   "perk.rpperks.gym_lover.desc": "Workouts 50% more useful, muscles recover twice as fast.",
   "perk.rpperks.iron_stomach.name": "§aIron Stomach",
   "perk.rpperks.iron_stomach.desc": "Food poisoning half as often, overeating hits later.",
+  "perk.rpperks.clean.name": "§aClean Freak",
+  "perk.rpperks.clean.desc": "Washes hands and food: gets food poisoning half as often, and their dishes poison others half as often.",
   "perk.rpperks.light_eater.name": "§aLight Eater",
   "perk.rpperks.light_eater.desc": "Hunger is slower, but the stomach is smaller.",
   "perk.rpperks.low_thirst.name": "§aLow Thirst",

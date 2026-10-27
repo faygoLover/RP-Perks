@@ -72,7 +72,7 @@ public final class CoreTraits implements TraitProvider {
         m.put(RpIds.ANOREXIC, Set.of(Perk.ANOREXIC));
         m.put(RpIds.DIETITIAN, Set.of(Perk.DIETITIAN));
         m.put(RpIds.FIELD_COOK, Set.of(Perk.FIELD_COOK));
-        m.put(RpIds.CLEAN, Set.of(Perk.IRON_STOMACH));
+        m.put(RpIds.CLEAN, Set.of(Perk.CLEAN));
         m.put(RpIds.IRON_STOMACH, Set.of(Perk.IRON_STOMACH));
         m.put(RpIds.WEAK_STOMACH, Set.of(Perk.WEAK_STOMACH));
         m.put(RpIds.GOURMET, Set.of(Perk.GOURMET));

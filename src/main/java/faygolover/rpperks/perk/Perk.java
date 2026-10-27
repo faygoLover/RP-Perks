@@ -31,6 +31,7 @@ public enum Perk {
     TOUGH("tough", Category.MAIN, 5, "Крепкий"),
     // Еда и вода
     IRON_STOMACH("iron_stomach", Category.MAIN, 3, "Железный желудок"),
+    CLEAN("clean", Category.MAIN, 3, "Чистюля", "rpculinary"),
     LIGHT_EATER("light_eater", Category.MAIN, 2, "Малоежка"),
     LOW_THIRST("low_thirst", Category.MAIN, 2, "Мало пьёт", "rpculinary"),
     FAST_METABOLISM("fast_metabolism", Category.MAIN, 1, "Быстрый обмен веществ"),

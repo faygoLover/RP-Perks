@@ -244,6 +244,7 @@ public final class Config {
         beginPerk(Perk.IRON_STOMACH, "Железный желудок: отравиться едой вдвое реже. Без RP Culinary — ванильное отравление (сырая курица, гнилая плоть) реже");
         IRON_STOMACH_POISON_MULT = B.comment(" Без Culinary: шанс, что ванильное отравление от еды подействует").defineInRange("vanilla_poison_chance", 0.5, 0.0, 1.0);
         B.pop();
+        rpPerk(Perk.CLEAN, "Чистюля: моет руки и продукты — реже травится сам и реже травит тех, кто ест его блюда (механика — RP Culinary)");
         rpPerk(Perk.LIGHT_EATER, "Малоежка: голод медленнее, желудок меньше (механика — RP Culinary)");
         rpPerk(Perk.LOW_THIRST, "Мало пьёт: вода тратится медленнее (механика — RP Culinary)");
         rpPerk(Perk.FAST_METABOLISM, "Быстрый обмен веществ: тратит на 15 % больше, легко держит вес (нужен RP Culinary)");
