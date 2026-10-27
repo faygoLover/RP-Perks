@@ -31,6 +31,7 @@ public final class Config {
     // ---------- [general] ----------
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> HIDDEN_PERKS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> SERVICE_PERKS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> POSITIVE_PERKS;
     public static final ForgeConfigSpec.IntValue DEFAULTS_VERSION;
 
     // ---------- [selection] ----------
@@ -129,6 +130,7 @@ public final class Config {
     private static volatile Set<ResourceLocation> caffeineItems = Set.of();
     private static volatile Set<Perk> hiddenPerks = EnumSet.of(Perk.ADMIN);
     private static volatile Set<Perk> servicePerks;
+    private static volatile Set<Perk> positivePerks = Set.of();
     private static volatile Map<Perk, Set<Perk>> conflicts = Map.of();
     private static volatile Map<Perk, Map<faygolover.rpperks.skill.SkillDef, Integer>> perkSkills = Map.of();
 
@@ -169,6 +171,11 @@ public final class Config {
                         " Перки, которые считаются служебными: вкладка «Служебные» у ГМа, взять самому нельзя,",
                         " выдаёт только администрация (как «Админ»). Указываются ID, например: [\"solar_powered\"]")
                 .defineListAllowEmpty(List.of("service_perks"), List.of(), Config::isString);
+
+        POSITIVE_PERKS = B.comment(
+                        " Негативные перки, которые считать положительными: стоят баллы (cost), вкладка основных.",
+                        " Например: [\"cannibal\"]")
+                .defineListAllowEmpty(List.of("positive_perks"), List.of(), Config::isString);
 
         DEFAULTS_VERSION = B.comment(
                         " Служебное: до какой версии уже обновлены значения по умолчанию. Не меняйте.")
@@ -526,6 +533,9 @@ public final class Config {
         rpPerk(Perk.ALCOHOL_ADDICT, "Алкоголик: без алкоголя — стресс, потом ломка (механика — RP Medicine, иначе РП)");
         rpPerk(Perk.SMOKER, "Курильщик: без курения настроение хуже, ломка (механика — RP Medicine, иначе РП)");
         rpPerk(Perk.TEETOTALER, "Не переносит алкоголь (РП)");
+        beginPerk(Perk.CANNIBAL, "Каннибал: человечина — обычная еда, без удара по рассудку и болезни (механика — RP Culinary).",
+                "Знак — в [general] positive_perks (по умолчанию негативный: даёт баллы)");
+        B.pop();
 
         beginPerk(Perk.HOMEBODY, "Домашний: пониженная устойчивость к температуре (LSO). С RP Medicine — иммунитет слабее");
         bonus(Perk.HOMEBODY, Stat.THERMAL_RESISTANCE, -2.0);
@@ -569,6 +579,8 @@ public final class Config {
                 "Снимает все ограничения: ванильные характеристики, выносливость не тратится,",
                 " полный инвентарь. Действие всех остальных перков приостановлено, пока Админ активен.");
         B.pop();
+        for (Perk p : Perk.values()) if (p.getId().startsWith("exotic_"))
+            rpPerk(p, p.getTitle() + ": готовит эту экзотику как обычно. Даёт книга «Записи исследований» (RP Culinary)");
         B.pop();
 
         // На случай, если в enum добавят перк и забудут описать его выше
@@ -786,6 +798,11 @@ public final class Config {
     }
 
     /** Перк назначен служебным в конфиге (service_perks). */
+    /** Негативный перк назначен положительным в конфиге (positive_perks). */
+    public static boolean isFlippedPositive(Perk perk) {
+        return positivePerks.contains(perk);
+    }
+
     public static boolean isService(Perk perk) {
         Set<Perk> s = servicePerks;  // null, пока конфиг не загружен (и при построении самого конфига)
         return s != null && s.contains(perk);
@@ -857,6 +874,13 @@ public final class Config {
                     () -> Rpperks.LOGGER.error("[RP Perks] Неизвестный перк в service_perks: {}", entry));
         }
         servicePerks = service;
+
+        Set<Perk> positive = EnumSet.noneOf(Perk.class);
+        for (String entry : POSITIVE_PERKS.get()) {
+            Perk.fromId(entry.trim()).ifPresentOrElse(positive::add,
+                    () -> Rpperks.LOGGER.error("[RP Perks] Неизвестный перк в positive_perks: {}", entry));
+        }
+        positivePerks = positive;
 
         // Несовместимости
         Map<Perk, Set<Perk>> map = new EnumMap<>(Perk.class);

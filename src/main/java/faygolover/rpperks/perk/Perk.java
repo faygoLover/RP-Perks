@@ -117,6 +117,7 @@ public enum Perk {
     ALCOHOL_ADDICT("alcohol_addict", Category.NEGATIVE, 4, "Алкоголик"),
     SMOKER("smoker", Category.NEGATIVE, 2, "Курильщик"),
     TEETOTALER("teetotaler", Category.NEGATIVE, 2, "Непьющий"),
+    CANNIBAL("cannibal", Category.NEGATIVE, 2, "Каннибал", "rpculinary"),
     // Мир вокруг
     HOMEBODY("homebody", Category.NEGATIVE, 2, "Домашний"),
     SUN_SENSITIVE("sun_sensitive", Category.NEGATIVE, 3, "Чувствительность к солнцу"),
@@ -127,7 +128,19 @@ public enum Perk {
     KITCHEN_NIGHTMARE("kitchen_nightmare", Category.NEGATIVE, 2, "Кухонный кошмар"),
 
     // === Служебные ===
-    ADMIN("admin", Category.SERVICE, 0, "Админ");
+    ADMIN("admin", Category.SERVICE, 0, "Админ"),
+    // Знания экзотической кухни (RP Culinary): даёт книга «Записи исследований», выдаёт ГМ
+    EXOTIC_UNDERGROUND("exotic_underground", Category.SERVICE, 0, "Знание: подземная кухня", "rpculinary"),
+    EXOTIC_CANDY("exotic_candy", Category.SERVICE, 0, "Знание: конфетная полость", "rpculinary"),
+    EXOTIC_DEEP_SEA("exotic_deep_sea", Category.SERVICE, 0, "Знание: морские глубины", "rpculinary"),
+    EXOTIC_FAR_LANDS("exotic_far_lands", Category.SERVICE, 0, "Знание: дальние земли", "rpculinary"),
+    EXOTIC_NETHER("exotic_nether", Category.SERVICE, 0, "Знание: Нижний мир", "rpculinary"),
+    EXOTIC_END("exotic_end", Category.SERVICE, 0, "Знание: Край", "rpculinary"),
+    EXOTIC_PETS("exotic_pets", Category.SERVICE, 0, "Знание: домашние звери", "rpculinary"),
+    EXOTIC_MONSTERS("exotic_monsters", Category.SERVICE, 0, "Знание: монстры", "rpculinary"),
+    EXOTIC_INFECTED("exotic_infected", Category.SERVICE, 0, "Знание: заражённое", "rpculinary"),
+    EXOTIC_RADIOACTIVE("exotic_radioactive", Category.SERVICE, 0, "Знание: радиоактивное", "rpculinary"),
+    EXOTIC_ANOMALOUS("exotic_anomalous", Category.SERVICE, 0, "Знание: аномальное", "rpculinary");
 
     public enum Category {
         MAIN("main"),
@@ -162,7 +175,10 @@ public enum Perk {
     }
 
     public String getId() { return id; }
-    public Category getCategory() { return faygolover.rpperks.Config.isService(this) ? Category.SERVICE : category; }
+    public Category getCategory() {
+        if (faygolover.rpperks.Config.isService(this)) return Category.SERVICE;
+        return category == Category.NEGATIVE && faygolover.rpperks.Config.isFlippedPositive(this) ? Category.MAIN : category;
+    }
 
     /** Категория из кода, без учёта service_perks в конфиге. */
     public Category getBaseCategory() { return category; }
@@ -181,7 +197,7 @@ public enum Perk {
     public int getCost() { return Config.getCost(this); }
 
     /** Положительные перки и умения стоят баллы, негативные — дают. */
-    public boolean isPositive() { return category != Category.NEGATIVE; }
+    public boolean isPositive() { return category != Category.NEGATIVE || faygolover.rpperks.Config.isFlippedPositive(this); }
 
     /** На сколько изменится баланс игрока при выдаче перка. */
     public int getPointsDelta() { return isPositive() ? -getCost() : getCost(); }

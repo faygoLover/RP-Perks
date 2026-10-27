@@ -87,7 +87,30 @@ public final class CoreTraits implements TraitProvider {
         m.put(RpIds.EMACIATED, Set.of(Perk.EMACIATED));
         m.put(RpIds.OVERWEIGHT, Set.of(Perk.OVERWEIGHT));
         m.put(RpIds.OBESE, Set.of(Perk.OBESE));
+        // Экзотика и каннибализм (RP Culinary): черты rpculinary:exotic/<группа>, rpculinary:cannibal
+        m.put(new ResourceLocation("rpculinary", "cannibal"), Set.of(Perk.CANNIBAL));
+        for (Perk p : Perk.values()) if (p.getId().startsWith("exotic_"))
+            m.put(new ResourceLocation("rpculinary", "exotic/" + p.getId().substring("exotic_".length())), Set.of(p));
         return Map.copyOf(m);
+    }
+
+    /**
+     * Выдать служебный перк-знание по черте (книга «Записи исследований» RP Culinary зовёт отражением, без
+     * зависимости). 1 — выдан, 0 — уже есть, −1 — нет такого знания или данных игрока.
+     */
+    public static int grantKnowledge(ServerPlayer player, ResourceLocation trait) {
+        Set<Perk> perks = TRAITS.get(trait);
+        PlayerPerks d = data(player);
+        if (perks == null || d == null) return -1;
+        for (Perk p : perks) {
+            if (p.getBaseCategory() != Perk.Category.SERVICE) continue;
+            if (d.owns(p)) return 0;
+            if (!d.grantPerk(p, null)) return 0;
+            PerkEventHandler.refreshPlayer(player, d);
+            faygolover.rpperks.Rpperks.LOGGER.info("[RP Perks] {} изучил {}", player.getScoreboardName(), p.getId());
+            return 1;
+        }
+        return -1;
     }
 
     private static PlayerPerks data(Player p) {
