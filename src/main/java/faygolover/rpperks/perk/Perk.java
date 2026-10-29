@@ -117,7 +117,7 @@ public enum Perk {
     ALCOHOL_ADDICT("alcohol_addict", Category.NEGATIVE, 4, "Алкоголик"),
     SMOKER("smoker", Category.NEGATIVE, 2, "Курильщик"),
     TEETOTALER("teetotaler", Category.NEGATIVE, 2, "Непьющий"),
-    CANNIBAL("cannibal", Category.NEGATIVE, 2, "Каннибал", "rpculinary"),
+    CANNIBAL("cannibal", Category.NEGATIVE, 3, "Каннибал", "rpculinary"),
     // Мир вокруг
     HOMEBODY("homebody", Category.NEGATIVE, 2, "Домашний"),
     SUN_SENSITIVE("sun_sensitive", Category.NEGATIVE, 3, "Чувствительность к солнцу"),
@@ -196,8 +196,11 @@ public enum Perk {
     /** Актуальная цена из конфига (всегда положительное число). */
     public int getCost() { return Config.getCost(this); }
 
+    /** Негативный по смыслу, но баллы не даёт, а стоит (решение Alex 29.10.2026): остаётся во вкладке негативных. */
+    public boolean isPaidNegative() { return this == CANNIBAL; }
+
     /** Положительные перки и умения стоят баллы, негативные — дают. */
-    public boolean isPositive() { return category != Category.NEGATIVE || faygolover.rpperks.Config.isFlippedPositive(this); }
+    public boolean isPositive() { return category != Category.NEGATIVE || isPaidNegative() || faygolover.rpperks.Config.isFlippedPositive(this); }
 
     /** На сколько изменится баланс игрока при выдаче перка. */
     public int getPointsDelta() { return isPositive() ? -getCost() : getCost(); }
