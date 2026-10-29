@@ -120,7 +120,8 @@ public final class PerkMechanicsHandler {
         int threshold = Config.caffeineWithdrawalTicks();
         // Клампим таймер порогом: после срабатывания ломки дальше расти ему незачем (UI показывает
         // только факт ломки), а без этого таймер рос бы неограниченно при постоянном онлайне без кофе.
-        if (data.getCaffeineTimer() < threshold) {
+        // Время RP стоит (/time pause) — таймер ломки тоже.
+        if (data.getCaffeineTimer() < threshold && faygolover.rpcore.api.RpCoreAPI.timeRunning()) {
             data.setCaffeineTimer(Math.min(data.getCaffeineTimer() + 1, threshold));
         }
 
