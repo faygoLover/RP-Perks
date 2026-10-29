@@ -73,6 +73,8 @@ public enum Perk {
     FIRST_AID("first_aid", Category.SKILL, 3, "Курсы первой медицинской помощи"),
     DIETITIAN("dietitian", Category.SKILL, 3, "Диетолог"),
     FIELD_COOK("field_cook", Category.SKILL, 3, "Полевой повар"),
+    VINTNER("vintner", Category.SKILL, 3, "Винокур", "rpculinary"),
+    PRESERVER("preserver", Category.SKILL, 3, "Заготовщик", "rpculinary"),
 
     // === Негативные ===
     // Тело
@@ -118,6 +120,7 @@ public enum Perk {
     SMOKER("smoker", Category.NEGATIVE, 2, "Курильщик"),
     TEETOTALER("teetotaler", Category.NEGATIVE, 2, "Непьющий"),
     CANNIBAL("cannibal", Category.NEGATIVE, 3, "Каннибал", "rpculinary"),
+    SEAFOOD_ALLERGY("seafood_allergy", Category.NEGATIVE, 2, "Аллергия на морепродукты", "rpculinary"),
     // Мир вокруг
     HOMEBODY("homebody", Category.NEGATIVE, 2, "Домашний"),
     SUN_SENSITIVE("sun_sensitive", Category.NEGATIVE, 3, "Чувствительность к солнцу"),
@@ -129,18 +132,16 @@ public enum Perk {
 
     // === Служебные ===
     ADMIN("admin", Category.SERVICE, 0, "Админ"),
-    // Знания экзотической кухни (RP Culinary): даёт книга «Записи исследований», выдаёт ГМ
-    EXOTIC_UNDERGROUND("exotic_underground", Category.SERVICE, 0, "Знание: подземная кухня", "rpculinary"),
-    EXOTIC_CANDY("exotic_candy", Category.SERVICE, 0, "Знание: конфетная полость", "rpculinary"),
-    EXOTIC_DEEP_SEA("exotic_deep_sea", Category.SERVICE, 0, "Знание: морские глубины", "rpculinary"),
-    EXOTIC_FAR_LANDS("exotic_far_lands", Category.SERVICE, 0, "Знание: дальние земли", "rpculinary"),
-    EXOTIC_NETHER("exotic_nether", Category.SERVICE, 0, "Знание: Нижний мир", "rpculinary"),
-    EXOTIC_END("exotic_end", Category.SERVICE, 0, "Знание: Край", "rpculinary"),
-    EXOTIC_PETS("exotic_pets", Category.SERVICE, 0, "Знание: домашние звери", "rpculinary"),
-    EXOTIC_MONSTERS("exotic_monsters", Category.SERVICE, 0, "Знание: монстры", "rpculinary"),
-    EXOTIC_INFECTED("exotic_infected", Category.SERVICE, 0, "Знание: заражённое", "rpculinary"),
-    EXOTIC_RADIOACTIVE("exotic_radioactive", Category.SERVICE, 0, "Знание: радиоактивное", "rpculinary"),
-    EXOTIC_ANOMALOUS("exotic_anomalous", Category.SERVICE, 0, "Знание: аномальное", "rpculinary");
+    // Знания экзотической кухни (RP Culinary, группы 29.10.2026): дают журналы и записи исследований с книжной полки
+    EXOTIC_GAME("exotic_game", Category.SERVICE, 0, "Знание: дичь", "rpculinary"),
+    EXOTIC_SEAFOOD("exotic_seafood", Category.SERVICE, 0, "Знание: моллюски и ракообразные", "rpculinary"),
+    EXOTIC_FUGU("exotic_fugu", Category.SERVICE, 0, "Знание: иглобрюх (фугу)", "rpculinary"),
+    EXOTIC_DEEP_SEA("exotic_deep_sea", Category.SERVICE, 0, "Знание: глубоководная рыба", "rpculinary"),
+    EXOTIC_INSECTS("exotic_insects", Category.SERVICE, 0, "Знание: насекомые", "rpculinary"),
+    EXOTIC_OFFAL("exotic_offal", Category.SERVICE, 0, "Знание: субпродукты", "rpculinary"),
+    EXOTIC_MUSHROOMS("exotic_mushrooms", Category.SERVICE, 0, "Знание: дикие грибы", "rpculinary"),
+    EXOTIC_OTHER_WORLDS("exotic_other_worlds", Category.SERVICE, 0, "Знание: Нижний мир и Край", "rpculinary"),
+    EXOTIC_MONSTERS("exotic_monsters", Category.SERVICE, 0, "Знание: монстры и мутанты", "rpculinary");
 
     public enum Category {
         MAIN("main"),

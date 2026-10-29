@@ -89,6 +89,9 @@ public final class CoreTraits implements TraitProvider {
         m.put(RpIds.OBESE, Set.of(Perk.OBESE));
         // Экзотика и каннибализм (RP Culinary): черты rpculinary:exotic/<группа>, rpculinary:cannibal
         m.put(new ResourceLocation("rpculinary", "cannibal"), Set.of(Perk.CANNIBAL));
+        m.put(new ResourceLocation("rpculinary", "seafood_allergy"), Set.of(Perk.SEAFOOD_ALLERGY));
+        m.put(new ResourceLocation("rpculinary", "vintner"), Set.of(Perk.VINTNER));
+        m.put(new ResourceLocation("rpculinary", "preserver"), Set.of(Perk.PRESERVER));
         for (Perk p : Perk.values()) if (p.getId().startsWith("exotic_"))
             m.put(new ResourceLocation("rpculinary", "exotic/" + p.getId().substring("exotic_".length())), Set.of(p));
         return Map.copyOf(m);

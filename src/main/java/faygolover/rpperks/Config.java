@@ -337,6 +337,8 @@ public final class Config {
         B.pop();
         rpPerk(Perk.DIETITIAN, "Диетолог: точный состав еды и советы «что съесть» (нужен RP Culinary)");
         rpPerk(Perk.FIELD_COOK, "Полевой повар: на костре и в коптильне готовит как на 2 уровня Кулинарии выше (нужен RP Culinary)");
+        rpPerk(Perk.VINTNER, "Винокур: самогон, пиво, вино, сидр, медовуха — без него станции Brewery и Vinery не работают (RP Culinary)");
+        rpPerk(Perk.PRESERVER, "Заготовщик: консервы, копчение, засолка, вяление — без него не выходят (RP Culinary)");
         B.pop();
 
         // =====================================================================
@@ -536,6 +538,7 @@ public final class Config {
         beginPerk(Perk.CANNIBAL, "Каннибал: человечина — обычная еда, без удара по рассудку и болезни (механика — RP Culinary).",
                 "Негативный, но баллы не даёт, а стоит (cost); остаётся во вкладке негативных");
         B.pop();
+        rpPerk(Perk.SEAFOOD_ALLERGY, "Аллергия на морепродукты: сыпь, отёк и одышка даже от хорошо приготовленных (механика — RP Culinary)");
 
         beginPerk(Perk.HOMEBODY, "Домашний: пониженная устойчивость к температуре (LSO). С RP Medicine — иммунитет слабее");
         bonus(Perk.HOMEBODY, Stat.THERMAL_RESISTANCE, -2.0);
@@ -580,7 +583,7 @@ public final class Config {
                 " полный инвентарь. Действие всех остальных перков приостановлено, пока Админ активен.");
         B.pop();
         for (Perk p : Perk.values()) if (p.getId().startsWith("exotic_"))
-            rpPerk(p, p.getTitle() + ": готовит эту экзотику как обычно. Даёт книга «Записи исследований» (RP Culinary)");
+            rpPerk(p, p.getTitle() + ": готовит эту экзотику как обычно. Даёт журнал или записи исследований (RP Culinary)");
         B.pop();
 
         // На случай, если в enum добавят перк и забудут описать его выше
