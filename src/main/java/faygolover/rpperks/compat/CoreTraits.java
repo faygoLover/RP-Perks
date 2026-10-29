@@ -89,6 +89,19 @@ public final class CoreTraits implements TraitProvider {
         m.put(RpIds.OBESE, Set.of(Perk.OBESE));
         // Экзотика и каннибализм (RP Culinary): черты rpculinary:exotic/<группа>, rpculinary:cannibal
         m.put(new ResourceLocation("rpculinary", "cannibal"), Set.of(Perk.CANNIBAL));
+        // Сон (RP Needs): черты rpneeds:<id>
+        m.put(new ResourceLocation("rpneeds", "unfussy"), Set.of(Perk.UNFUSSY));
+        m.put(new ResourceLocation("rpneeds", "deep_sleeper"), Set.of(Perk.DEEP_SLEEPER));
+        m.put(new ResourceLocation("rpneeds", "short_sleeper"), Set.of(Perk.SHORT_SLEEPER));
+        m.put(new ResourceLocation("rpneeds", "tireless"), Set.of(Perk.TIRELESS));
+        m.put(new ResourceLocation("rpneeds", "early_bird"), Set.of(Perk.EARLY_BIRD));
+        m.put(new ResourceLocation("rpneeds", "night_owl"), Set.of(Perk.NIGHT_OWL));
+        m.put(new ResourceLocation("rpneeds", "insomnia"), Set.of(Perk.INSOMNIA));
+        m.put(new ResourceLocation("rpneeds", "light_sleeper"), Set.of(Perk.LIGHT_SLEEPER));
+        m.put(new ResourceLocation("rpneeds", "sleepyhead"), Set.of(Perk.SLEEPYHEAD));
+        m.put(new ResourceLocation("rpneeds", "nightmares"), Set.of(Perk.NIGHTMARES));
+        m.put(new ResourceLocation("rpneeds", "heavy_waking"), Set.of(Perk.HEAVY_WAKING));
+        m.put(new ResourceLocation("rpneeds", "snorer"), Set.of(Perk.SNORER));
         m.put(new ResourceLocation("rpculinary", "seafood_allergy"), Set.of(Perk.SEAFOOD_ALLERGY));
         m.put(new ResourceLocation("rpculinary", "vintner"), Set.of(Perk.VINTNER));
         m.put(new ResourceLocation("rpculinary", "preserver"), Set.of(Perk.PRESERVER));

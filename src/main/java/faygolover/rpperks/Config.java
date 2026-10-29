@@ -601,6 +601,9 @@ public final class Config {
                         " При выдаче перка все несовместимые с ним снимаются, баллы за них возвращаются.")
                 .defineListAllowEmpty(List.of("pairs"), List.of(
                         "puny = out_of_shape, fit, athletic",
+                        "early_bird = night_owl",
+                        "deep_sleeper = light_sleeper",
+                        "short_sleeper = insomnia",
                         "out_of_shape = fit, athletic, emaciated, obese",
                         "fit = athletic, emaciated, overweight, obese",
                         "athletic = emaciated, overweight, obese, weakling, asthmatic, turtle, clumsy_runner",

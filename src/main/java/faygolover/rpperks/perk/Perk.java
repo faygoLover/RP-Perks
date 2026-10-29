@@ -26,6 +26,13 @@ public enum Perk {
     SECOND_WIND("second_wind", Category.MAIN, 3, "Второе дыхание", "rpstamina"),
     QUICK_REST("quick_rest", Category.MAIN, 2, "Быстрый отдых", "rpstamina"),
     GYM_LOVER("gym_lover", Category.MAIN, 4, "Любитель спорта"),
+    // Сон (RP Needs)
+    UNFUSSY("unfussy", Category.MAIN, 4, "Неприхотливый", "rpneeds"),
+    DEEP_SLEEPER("deep_sleeper", Category.MAIN, 2, "Крепкий сон", "rpneeds"),
+    SHORT_SLEEPER("short_sleeper", Category.MAIN, 3, "Короткий сон", "rpneeds"),
+    TIRELESS("tireless", Category.MAIN, 3, "Двужильный", "rpneeds"),
+    EARLY_BIRD("early_bird", Category.MAIN, 1, "Жаворонок", "rpneeds"),
+    NIGHT_OWL("night_owl", Category.MAIN, 1, "Сова", "rpneeds"),
     // Живучесть и прочность
     SURVIVOR("survivor", Category.MAIN, 6, "Живучий"),
     TOUGH("tough", Category.MAIN, 5, "Крепкий"),
@@ -121,6 +128,13 @@ public enum Perk {
     TEETOTALER("teetotaler", Category.NEGATIVE, 2, "Непьющий"),
     CANNIBAL("cannibal", Category.NEGATIVE, 3, "Каннибал", "rpculinary"),
     SEAFOOD_ALLERGY("seafood_allergy", Category.NEGATIVE, 2, "Аллергия на морепродукты", "rpculinary"),
+    // Сон (RP Needs)
+    INSOMNIA("insomnia", Category.NEGATIVE, 3, "Бессонница", "rpneeds"),
+    LIGHT_SLEEPER("light_sleeper", Category.NEGATIVE, 2, "Чуткий сон", "rpneeds"),
+    SLEEPYHEAD("sleepyhead", Category.NEGATIVE, 2, "Соня", "rpneeds"),
+    NIGHTMARES("nightmares", Category.NEGATIVE, 2, "Кошмары", "rpneeds"),
+    HEAVY_WAKING("heavy_waking", Category.NEGATIVE, 1, "Тяжёлый подъём", "rpneeds"),
+    SNORER("snorer", Category.NEGATIVE, 1, "Храпун", "rpneeds"),
     // Мир вокруг
     HOMEBODY("homebody", Category.NEGATIVE, 2, "Домашний"),
     SUN_SENSITIVE("sun_sensitive", Category.NEGATIVE, 3, "Чувствительность к солнцу"),
