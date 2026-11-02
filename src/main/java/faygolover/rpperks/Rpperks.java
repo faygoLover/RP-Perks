@@ -24,6 +24,8 @@ public class Rpperks {
 
         // SERVER-конфиг: лежит в папке мира (serverconfig/rpperks-server.toml) и автоматически отправляется клиентам
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC);
+        // CLIENT-конфиг фигуры (config/rpperks-client.toml): покачивание, исключения брони
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, faygolover.rpperks.figure.client.FigureClientConfig.SPEC);
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
