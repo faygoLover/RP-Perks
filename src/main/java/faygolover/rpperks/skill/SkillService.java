@@ -22,8 +22,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Навыки 0–10. Итоговый уровень = уровень ГМа, иначе наработанный, но не ниже уровня от перков (от нескольких —
- * наибольший); Плохая координация −1 к огнестрелу, Пацифист — боевые не выше 1.
+ * Навыки 0–10. Итоговый уровень = наработанный, но не ниже уровня от перков (от нескольких — наибольший); ГМ
+ * прибавляет и отнимает уровни поверх наработанного, не замораживая навык (2.7.0). Плохая координация −1 к огнестрелу,
+ * Пацифист — боевые не выше 1.
  * <p>
  * 2.0.0 (решения брата 13–14.10.2026, RP Stamina Sports docs/02, 06, 07):
  * <ul>
@@ -55,9 +56,6 @@ public final class SkillService {
         m.put(Perk.STRONGMAN, new Offset(SkillDef.STRENGTH, 3));
         PHYSICAL_OFFSETS = Map.copyOf(m);
     }
-
-    /** Откуда итоговый уровень (для вкладки навыков). */
-    public enum Source { TRAINED, PERK, GM }
 
     @Nullable
     public static PlayerPerks data(Player p) {
@@ -93,16 +91,63 @@ public final class SkillService {
         return Math.max(t, perkFloor(d, s));
     }
 
-    public static Source source(PlayerPerks d, SkillDef s) {
-        if (d.getSkillLevel(s.id.toString()) >= 0) return Source.GM;
-        if (s.kind != SkillDef.Kind.PHYSICAL && perkFloor(d, s) > d.getTrained(s.key())) return Source.PERK;
-        return Source.TRAINED;
+    /** Прогресс в уровнях: наработанный уровень + доля опыта до следующего (3,4567 — третий и 45,67 %). */
+    public static double progress(PlayerPerks d, SkillDef s) {
+        int b = base(d, s);
+        if (b >= 10) return 10;
+        return b + Math.min(0.9999, d.getSkillXp(s.key()) / need(s, b));
+    }
+
+    /**
+     * ГМ: поставить прогресс (уровень + доля) как наработанный. Навык не замораживается — дальше растёт и падает сам.
+     * Ниже уровня от перков всё равно не опустится: перки задают минимум.
+     */
+    public static void setProgress(PlayerPerks d, SkillDef s, double progress) {
+        double p = Math.round(Math.max(0, Math.min(10, progress)) * 10000) / 10000.0; // шаги по 0,1 без хвостов 3,9999…
+        int lvl = (int) Math.floor(p);
+        d.setTrained(s.key(), lvl);
+        d.setSkillXp(s.key(), lvl >= 10 ? 0 : (p - lvl) * need(s, lvl));
+    }
+
+    /** ГМ: прибавить или отнять уровни поверх наработанного; 0,1 — 10 % уровня. */
+    public static void shift(PlayerPerks d, SkillDef s, double levels) {
+        setProgress(d, s, progress(d, s) + levels);
+    }
+
+    /** ГМ (/rpcore skill): уровень с сохранением доли до следующего; {@code level < 0} — вернуть к стартовому. */
+    public static void setLevel(PlayerPerks d, SkillDef s, int level) {
+        if (level < 0) {
+            d.clearTrained(s.key());
+            return;
+        }
+        double p = progress(d, s);
+        setProgress(d, s, Math.min(10, level) + (p - Math.floor(p)));
+    }
+
+    /**
+     * Старое поле уровня ГМа (до 2.7.0 замораживало навык) → наработанный уровень по правилу Алекса 31.10:
+     * уровень = больший из наработанного и уровня ГМа; если ГМ был выше — опыт 10 % до следующего,
+     * иначе опыт наработанного сохраняется и к нему +10 %. На 10-м уровне опыт 0. Возвращает, сколько навыков переведено.
+     */
+    public static int migrateGmLevels(PlayerPerks d) {
+        int n = 0;
+        for (SkillDef s : SkillDef.VALUES) {
+            int gm = d.getSkillLevel(s.id.toString());
+            if (gm < 0) continue;
+            int trained = base(d, s);
+            int lvl = Math.max(trained, Math.min(10, gm));
+            double xp = lvl >= 10 ? 0 : (lvl > trained ? 0 : d.getSkillXp(s.key())) + need(s, lvl) * 0.1;
+            if (lvl < 10) xp = Math.min(xp, need(s, lvl) * 0.999);
+            d.setTrained(s.key(), lvl);
+            d.setSkillXp(s.key(), xp);
+            d.setSkillLevel(s.id.toString(), -1);
+            n++;
+        }
+        return n;
     }
 
     /** Итоговый уровень навыка 0–10 (сервер; на клиенте — из пакета). */
     public static int level(PlayerPerks d, SkillDef s) {
-        int gm = d.getSkillLevel(s.id.toString());
-        if (gm >= 0) return gm;
         int l = base(d, s);
         if (s.isCombat() && s != SkillDef.MELEE && s != SkillDef.EXPLOSIVES && d.hasPerk(Perk.CLUMSY))
             l -= Config.get(Config.CLUMSY_WEAPON_PENALTY);
@@ -206,7 +251,7 @@ public final class SkillService {
     private static void addXp(ServerPlayer p, SkillDef s, double raw) {
         if (!Config.get(Config.SKILL_GROWTH)) return;
         PlayerPerks d = data(p);
-        if (d == null || d.isAdmin() || d.getSkillLevel(s.id.toString()) >= 0) return;
+        if (d == null || d.isAdmin()) return;
         double amount = raw * xpMultiplier(p, d, s);
         if (amount <= 0) return;
         int lvl = base(d, s);
@@ -293,7 +338,7 @@ public final class SkillService {
 
     /** Отнять опыт; при нехватке — уровень вниз (не ниже {@code floor}). true — что-то изменилось. */
     private static boolean lose(ServerPlayer p, PlayerPerks d, SkillDef s, double amount, int floor, String messageKey) {
-        if (amount <= 0 || d.getSkillLevel(s.id.toString()) >= 0) return false;
+        if (amount <= 0) return false;
         int lvl = base(d, s);
         if (lvl <= floor && d.getSkillXp(s.key()) <= 0) return false;
         double xp = d.getSkillXp(s.key()) - amount;

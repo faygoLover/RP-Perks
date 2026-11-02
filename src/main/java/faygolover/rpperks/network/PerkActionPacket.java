@@ -26,10 +26,12 @@ public class PerkActionPacket {
         ADMIN_TOGGLE_BLOCK,
         ADMIN_TOGGLE_SELECTION,
         ADMIN_WIPE,
-        // Навыки: amount — номер навыка (SkillDef.ordinal). Уровень ставится «от ГМа», как /rpcore skill
+        // Навыки: amount — номер навыка (SkillDef.ordinal). ГМ прибавляет или отнимает уровень либо 10 % уровня
+        // поверх наработанного, как /rpcore skill … add; навык дальше растёт и падает сам
         ADMIN_SKILL_UP,
         ADMIN_SKILL_DOWN,
-        ADMIN_SKILL_RESET,
+        ADMIN_SKILL_UP_TENTH,
+        ADMIN_SKILL_DOWN_TENTH,
         // Анкета тела (RP Core): amount = пол + 4·возраст + 512·рост (см), см. {@link #packProfile}
         ADMIN_PROFILE;
 

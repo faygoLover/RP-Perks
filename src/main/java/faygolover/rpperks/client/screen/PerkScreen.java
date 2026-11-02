@@ -450,14 +450,16 @@ public class PerkScreen extends Screen {
             actionButton.visible = false;
             if (blockButton != null) blockButton.visible = false;
         } else if (tab == Tab.SKILLS) {
-            // У админа на вкладке навыков одна кнопка: снять уровень, выставленный ГМом
-            if (blockButton != null) blockButton.visible = false;
-            float[] v = data != null && selectedSkill != null ? data.getClientSkills().get(selectedSkill.key()) : null;
-            actionButton.visible = adminMode && v != null && (int) v[2] == 2;
-            if (actionButton.visible) {
+            // У админа на вкладке навыков: −10 % и +10 % уровня (целый уровень — −/+ в строке навыка)
+            boolean show = adminMode && data != null && selectedSkill != null;
+            actionButton.visible = show;
+            if (blockButton != null) blockButton.visible = show;
+            if (show) {
                 actionButton.active = true;
-                actionButton.setWidth(infoW - 8);
-                actionButton.setMessage(Component.translatable("gui.rpperks.button.skill_reset"));
+                actionButton.setWidth((infoW - 10) / 2);
+                actionButton.setMessage(Component.translatable("gui.rpperks.button.skill_down_tenth"));
+                blockButton.active = true;
+                blockButton.setMessage(Component.translatable("gui.rpperks.button.skill_up_tenth"));
             }
         } else if (data == null || selected == null) {
             actionButton.visible = false;
@@ -520,7 +522,7 @@ public class PerkScreen extends Screen {
 
     private void onAction() {
         if (tab == Tab.SKILLS) {
-            if (adminMode && selectedSkill != null) admin(Action.ADMIN_SKILL_RESET, null, selectedSkill.ordinal());
+            if (adminMode && selectedSkill != null) admin(Action.ADMIN_SKILL_DOWN_TENTH, null, selectedSkill.ordinal());
             return;
         }
         PlayerPerks data = data();
@@ -535,6 +537,10 @@ public class PerkScreen extends Screen {
     }
 
     private void onToggleBlock() {
+        if (tab == Tab.SKILLS) {
+            if (adminMode && selectedSkill != null) admin(Action.ADMIN_SKILL_UP_TENTH, null, selectedSkill.ordinal());
+            return;
+        }
         if (selected != null) admin(Action.ADMIN_TOGGLE_BLOCK, selected, 0);
     }
 
@@ -880,10 +886,9 @@ public class PerkScreen extends Screen {
         float[] v = data.getClientSkills().get(s.key());
         int lvl = v != null ? (int) v[0] : 0;
         line(Component.translatable(s.nameKey()), C_TITLE, 12);
-        String src = v == null ? "trained" : switch ((int) v[2]) { case 1 -> "perk"; case 2 -> "gm"; default -> "trained"; };
-        line(Component.translatable("gui.rpperks.skills.level", lvl).append(" · ")
-                .append(Component.translatable("gui.rpperks.skills.source." + src)), C_TEXT, 12);
-        if (v != null && lvl < 10) line(Component.literal((int) (v[1] * 100) + "%"), C_DIM, 12);
+        line(Component.translatable("gui.rpperks.skills.level", lvl), C_TEXT, 12);
+        if (v != null && lvl < 10) line(Component.translatable("gui.rpperks.skills.progress",
+                String.format(java.util.Locale.ROOT, "%.2f", Math.min(99.99, v[1] * 100))), C_DIM, 12);
         else if (lvl >= 10) line(Component.translatable("gui.rpperks.skills.max"), C_GOOD, 12);
         gap(4);
         text(Component.translatable(s.descKey()), C_DIM, w);

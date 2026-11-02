@@ -124,18 +124,18 @@ public final class PerkActions {
                 data.reset();
                 log = "очистил карточку";
             }
-            case ADMIN_SKILL_UP, ADMIN_SKILL_DOWN, ADMIN_SKILL_RESET -> {
+            case ADMIN_SKILL_UP, ADMIN_SKILL_DOWN, ADMIN_SKILL_UP_TENTH, ADMIN_SKILL_DOWN_TENTH -> {
                 if (msg.amount < 0 || msg.amount >= SkillDef.VALUES.length) return;
                 SkillDef skill = SkillDef.VALUES[msg.amount];
-                int now = SkillService.level(data, skill);
-                int level = switch (msg.action) {
-                    case ADMIN_SKILL_UP -> Math.min(10, now + 1);
-                    case ADMIN_SKILL_DOWN -> Math.max(0, now - 1);
-                    default -> -1;
+                double step = switch (msg.action) {
+                    case ADMIN_SKILL_UP -> 1;
+                    case ADMIN_SKILL_DOWN -> -1;
+                    case ADMIN_SKILL_UP_TENTH -> 0.1;
+                    default -> -0.1;
                 };
-                data.setSkillLevel(skill.id.toString(), level);
-                log = level < 0 ? "снял уровень ГМа навыка " + skill.key()
-                        : "поставил навык " + skill.key() + " на " + level;
+                SkillService.shift(data, skill, step);
+                log = String.format(java.util.Locale.ROOT, "изменил навык %s на %+.1f (теперь %.4f)",
+                        skill.key(), step, SkillService.progress(data, skill));
             }
             case ADMIN_PROFILE -> {
                 // Анкету после сохранения правит только ГМ (как /rpcore profile): пол, возраст, рост.

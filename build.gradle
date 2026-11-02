@@ -191,6 +191,9 @@ tasks.named('jar', Jar).configure {
                     "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")])
     }
 
+    // В сборку для игроков не идут игровые тесты и их площадка; для разработки они остаются.
+    exclude 'faygolover/rpperks/gametest/**', 'data/rpperks/structures/**'
+
     // This is the preferred method to reobfuscate your jar file
     finalizedBy 'reobfJar'
 }

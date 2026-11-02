@@ -156,9 +156,12 @@ public class PlayerPerks {
     public void setSelectionLocked(boolean locked) { this.selectionLocked = locked; }
 
     // ---------- Навыки (RP Core) ----------
-    /** Уровень, выставленный ГМом, или -1. */
+    /**
+     * Уровень ГМа из старых версий (до 2.7.0 он замораживал навык) или -1. Новых не пишется: при входе игрока
+     * переводится в наработанный ({@link faygolover.rpperks.skill.SkillService#migrateGmLevels}).
+     */
     public int getSkillLevel(String skill) { return skillLevels.getOrDefault(skill, -1); }
-    /** {@code level < 0} — убрать (вернуть уровень по перкам). */
+    /** {@code level < 0} — убрать. */
     public void setSkillLevel(String skill, int level) {
         if (level < 0) skillLevels.remove(skill);
         else skillLevels.put(skill, Math.min(10, level));
@@ -168,6 +171,11 @@ public class PlayerPerks {
     /** Наработанный уровень или -1. */
     public int getTrained(String skill) { return trained.getOrDefault(skill, -1); }
     public void setTrained(String skill, int level) { trained.put(skill, Math.max(0, Math.min(10, level))); }
+    /** Забыть наработанное: уровень снова стартовый, опыт 0. */
+    public void clearTrained(String skill) {
+        trained.remove(skill);
+        skillXp.remove(skill);
+    }
     public double getSkillXp(String skill) { return skillXp.getOrDefault(skill, 0.0); }
     public void setSkillXp(String skill, double xp) { skillXp.put(skill, Math.max(0, xp)); }
     public boolean isPhysiqueApplied(Perk perk) { return physiqueApplied.contains(perk.getId()); }

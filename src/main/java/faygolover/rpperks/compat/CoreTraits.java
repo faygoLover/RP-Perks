@@ -146,8 +146,31 @@ public final class CoreTraits implements TraitProvider {
     @Override
     public boolean setSkill(Player player, ResourceLocation skill, int level) {
         PlayerPerks d = data(player);
-        if (d == null || faygolover.rpperks.skill.SkillDef.byId(skill).isEmpty()) return false;
-        d.setSkillLevel(skill.toString(), level);
+        var s = faygolover.rpperks.skill.SkillDef.byId(skill);
+        if (d == null || s.isEmpty()) return false;
+        faygolover.rpperks.skill.SkillService.setLevel(d, s.get(), level);
+        if (player instanceof ServerPlayer sp) PerkEventHandler.refreshPlayer(sp, d);
+        return true;
+    }
+
+    @Override
+    public double skillProgress(Player player, ResourceLocation skill) {
+        PlayerPerks d = data(player);
+        var s = faygolover.rpperks.skill.SkillDef.byId(skill);
+        if (d == null || s.isEmpty()) return Double.NaN;
+        if (player.level().isClientSide) {
+            float[] v = d.getClientSkills().get(s.get().key());
+            return v == null ? Double.NaN : Math.min(10, v[0] + (v[0] >= 10 ? 0 : v[1]));
+        }
+        return faygolover.rpperks.skill.SkillService.progress(d, s.get());
+    }
+
+    @Override
+    public boolean addSkill(Player player, ResourceLocation skill, double levels) {
+        PlayerPerks d = data(player);
+        var s = faygolover.rpperks.skill.SkillDef.byId(skill);
+        if (d == null || s.isEmpty()) return false;
+        faygolover.rpperks.skill.SkillService.shift(d, s.get(), levels);
         if (player instanceof ServerPlayer sp) PerkEventHandler.refreshPlayer(sp, d);
         return true;
     }

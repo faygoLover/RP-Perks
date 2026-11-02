@@ -68,6 +68,12 @@ public final class PerkEventHandler {
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        // 2.7.0: старый уровень ГМа замораживал навык — перевести в наработанный до первой синхронизации.
+        player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
+            int n = faygolover.rpperks.skill.SkillService.migrateGmLevels(data);
+            if (n > 0) faygolover.rpperks.Rpperks.LOGGER.info("[RP Perks] {}: уровень ГМа переведён в наработанный ({} навык.)",
+                    player.getScoreboardName(), n);
+        });
         refresh(player);
         // 2.0.0: старые версии особенностей сняты с возвратом очков — сказать игроку один раз.
         player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
