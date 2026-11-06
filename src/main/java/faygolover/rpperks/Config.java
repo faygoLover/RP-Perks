@@ -287,7 +287,7 @@ public final class Config {
         NERD_RAGE_EFFECT_LEVEL = B.comment(" Уровень эффектов (1 = I, 2 = II ...)")
                 .defineInRange("effect_level", 1, 1, 10);
         B.pop();
-        rpPerk(Perk.ALCOHOLIC, "Закалённый алкоголик: легко переносит алкоголь (РП)");
+        rpPerk(Perk.ALCOHOLIC, "Стойкий организм: алкоголь, никотин, кофеин и лекарства действуют слабее (механика — RP Medicine)");
 
         beginPerk(Perk.TOURIST, "Турист: устойчивость к температуре среды (LSO). С RP Medicine — иммунитет крепче");
         bonus(Perk.TOURIST, Stat.THERMAL_RESISTANCE, 2.0);

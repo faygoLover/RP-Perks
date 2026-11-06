@@ -54,7 +54,7 @@ public enum Perk {
     BRAVE("brave", Category.MAIN, 4, "Храбрый"),
     STRONG_WILLED("strong_willed", Category.MAIN, 4, "Волевой"),
     NERD_RAGE("nerd_rage", Category.MAIN, 3, "Бешенство ботаника"),
-    ALCOHOLIC("alcoholic", Category.MAIN, 2, "Закалённый алкоголик"),
+    ALCOHOLIC("alcoholic", Category.MAIN, 2, "Стойкий организм"),
     // Мир вокруг
     TOURIST("tourist", Category.MAIN, 3, "Турист"),
     SOLAR_POWERED("solar_powered", Category.MAIN, 4, "Солнечная батарейка"),

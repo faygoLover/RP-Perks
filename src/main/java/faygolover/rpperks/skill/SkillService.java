@@ -22,9 +22,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Навыки 0–10. Итоговый уровень = наработанный, но не ниже уровня от перков (от нескольких — наибольший); ГМ
- * прибавляет и отнимает уровни поверх наработанного, не замораживая навык (2.7.0). Плохая координация −1 к огнестрелу,
- * Пацифист — боевые не выше 1.
+ * Навыки 0–10. Итоговый уровень = наработанный; ГМ прибавляет и отнимает уровни поверх наработанного, не замораживая
+ * навык (2.7.0). Умение — стартовый капитал (2.9.0, слои персонажа 06.11): при взятии один раз поднимает наработанный
+ * уровень до своего, дальше навык живёт сам; отказ от умения (жетон, ГМ) забирает выданные уровни. Плохая координация
+ * −1 к огнестрелу, Пацифист — боевые не выше 1.
  * <p>
  * 2.0.0 (решения брата 13–14.10.2026, RP Stamina Sports docs/02, 06, 07):
  * <ul>
@@ -62,7 +63,7 @@ public final class SkillService {
         return p.getCapability(PlayerPerksProvider.PLAYER_PERKS).resolve().orElse(null);
     }
 
-    /** Уровень от перков-умений (наибольший). */
+    /** Уровень от перков-умений (наибольший): старт для таланта, капитал при взятии. */
     public static int perkFloor(PlayerPerks d, SkillDef s) {
         int best = 0;
         for (Perk perk : d.getEffectivePerks()) best = Math.max(best, Config.getPerkSkills(perk).getOrDefault(s, 0));
@@ -88,7 +89,7 @@ public final class SkillService {
     public static int base(PlayerPerks d, SkillDef s) {
         int t = d.getTrained(s.key());
         if (s.kind == SkillDef.Kind.PHYSICAL) return t >= 0 ? t : startLevel(d, s);
-        return Math.max(t, perkFloor(d, s));
+        return Math.max(0, t);
     }
 
     /** Прогресс в уровнях: наработанный уровень + доля опыта до следующего (3,4567 — третий и 45,67 %). */
@@ -100,7 +101,6 @@ public final class SkillService {
 
     /**
      * ГМ: поставить прогресс (уровень + доля) как наработанный. Навык не замораживается — дальше растёт и падает сам.
-     * Ниже уровня от перков всё равно не опустится: перки задают минимум.
      */
     public static void setProgress(PlayerPerks d, SkillDef s, double progress) {
         double p = Math.round(Math.max(0, Math.min(10, progress)) * 10000) / 10000.0; // шаги по 0,1 без хвостов 3,9999…
@@ -299,8 +299,31 @@ public final class SkillService {
         };
     }
 
-    /** Раз в минуту в сети: плохое питание и болезнь отнимают Силу и Телосложение, вес вне нормы — тянет к потолку. */
+    /** Накопленное время тела по игрокам, в «минутах по нынешним числам». */
+    private static final Map<java.util.UUID, Double> BODY_MINUTES = new HashMap<>();
+
+    /**
+     * Раз в реальную минуту в сети: время тела (RP Core {@code bodyScale}; 1:1 при 3-часовых сутках, на паузе 0)
+     * копится, и за каждую накопленную минуту — шаг потери Силы и Телосложения.
+     */
     public static void minuteTick(ServerPlayer p, PlayerPerks d) {
+        double acc = BODY_MINUTES.getOrDefault(p.getUUID(), 0.0) + bodyMinute();
+        int steps = (int) Math.min(10, Math.floor(acc));
+        BODY_MINUTES.put(p.getUUID(), Math.min(1, acc - steps));
+        for (int i = 0; i < steps; i++) bodyMinuteTick(p, d);
+    }
+
+    /** Одна реальная минута в минутах времени тела. Без Core 0.13.0 — как раньше: 1, без паузы. */
+    private static double bodyMinute() {
+        try {
+            return RpCoreAPI.bodyScale() / 8.0;
+        } catch (NoSuchMethodError old) {
+            return 1;
+        }
+    }
+
+    /** Минута времени тела: плохое питание и болезнь отнимают Силу и Телосложение, вес вне нормы — тянет к потолку. */
+    private static void bodyMinuteTick(ServerPlayer p, PlayerPerks d) {
         if (!Config.get(Config.SKILL_GROWTH) || !Config.get(Config.PHYSICAL_DECAY_ENABLED) || d.isAdmin()) return;
         NutritionProvider n = RpCoreAPI.nutrition();
         var body = RpCoreAPI.body();
@@ -384,6 +407,43 @@ public final class SkillService {
         }
     }
 
+    /**
+     * Умения — стартовый капитал (2.9.0). Взятое умение один раз поднимает наработанный уровень до своего (ниже не
+     * опускает), запоминая прежний. Снятое (жетон отказа, ГМ) забирает выданное: уровень опускается на столько, сколько
+     * умение дало, но не ниже прежнего — наработанное сверху остаётся. Старые сохранения при первом входе получают
+     * отметку без изменений: раньше умение и так держало минимум.
+     */
+    public static void syncSkillPerks(PlayerPerks d) {
+        var grants = d.skillGrants();
+        for (Perk perk : Perk.values()) {
+            // owns, а не «действует»: режим Админа не должен забирать капитал.
+            boolean owns = d.owns(perk);
+            for (Map.Entry<SkillDef, Integer> e : Config.getPerkSkills(perk).entrySet()) {
+                SkillDef s = e.getKey();
+                if (s.kind == SkillDef.Kind.PHYSICAL) continue;
+                String key = perk.getId() + "/" + s.key();
+                Integer before = grants.get(key);
+                if (owns && before == null) {
+                    int t = Math.max(0, d.getTrained(s.key()));
+                    grants.put(key, t);
+                    if (t < e.getValue()) {
+                        d.setTrained(s.key(), e.getValue());
+                        d.setSkillXp(s.key(), 0);
+                    }
+                } else if (!owns && before != null) {
+                    grants.remove(key);
+                    int t = Math.max(0, d.getTrained(s.key()));
+                    int given = Math.max(0, e.getValue() - before);
+                    int lvl = Math.max(before, t - given);
+                    if (lvl != t) {
+                        d.setTrained(s.key(), lvl);
+                        d.setSkillXp(s.key(), 0);
+                    }
+                }
+            }
+        }
+    }
+
     // ------------------------------------------------------------------ синхронизация
 
     private static final Map<java.util.UUID, Long> DIRTY = new HashMap<>();
@@ -403,6 +463,7 @@ public final class SkillService {
 
     public static void forget(ServerPlayer p) {
         DIRTY.remove(p.getUUID());
+        BODY_MINUTES.remove(p.getUUID());
     }
 
     public static void sync(ServerPlayer p) {

@@ -40,6 +40,8 @@ public class PlayerPerks {
     private final Map<String, Double> skillXp = new java.util.HashMap<>();
     /** Физические перки, стартовый уровень которых уже применён (Силач → Сила 7 и т. п.). */
     private final Set<String> physiqueApplied = new java.util.HashSet<>();
+    /** Умения — стартовый капитал (2.9.0): «перк/навык» → наработанный уровень до того, как умение его подняло. */
+    private final Map<String, Integer> skillGrants = new java.util.HashMap<>();
     /** Минут подряд, пока действует причина потери Силы и Телосложения (мало белка, голод, болезнь…). */
     private final Map<String, Integer> decayMinutes = new java.util.HashMap<>();
     /** Версия данных: 2 — особенности 2.0.0. */
@@ -183,6 +185,8 @@ public class PlayerPerks {
         if (applied) physiqueApplied.add(perk.getId());
         else physiqueApplied.remove(perk.getId());
     }
+    /** Выданные умениями уровни: ключ «перк/навык» → уровень до выдачи. */
+    public Map<String, Integer> skillGrants() { return skillGrants; }
     public int getDecayMinutes(String cause) { return decayMinutes.getOrDefault(cause, 0); }
     public void setDecayMinutes(String cause, int minutes) {
         if (minutes <= 0) decayMinutes.remove(cause);
@@ -260,6 +264,8 @@ public class PlayerPerks {
         this.skillXp.putAll(source.skillXp);
         this.physiqueApplied.clear();
         this.physiqueApplied.addAll(source.physiqueApplied);
+        this.skillGrants.clear();
+        this.skillGrants.putAll(source.skillGrants);
         this.decayMinutes.clear();
         this.decayMinutes.putAll(source.decayMinutes);
         this.migrationRefunded = source.migrationRefunded;
@@ -299,6 +305,9 @@ public class PlayerPerks {
         ListTag applied = new ListTag();
         for (String id : physiqueApplied) applied.add(StringTag.valueOf(id));
         nbt.put("physiqueApplied", applied);
+        CompoundTag grants = new CompoundTag();
+        skillGrants.forEach(grants::putInt);
+        nbt.put("skillGrants", grants);
         CompoundTag decay = new CompoundTag();
         decayMinutes.forEach(decay::putInt);
         nbt.put("decayMinutes", decay);
@@ -330,6 +339,9 @@ public class PlayerPerks {
         this.physiqueApplied.clear();
         ListTag applied = nbt.getList("physiqueApplied", Tag.TAG_STRING);
         for (int i = 0; i < applied.size(); i++) physiqueApplied.add(applied.getString(i));
+        this.skillGrants.clear();
+        CompoundTag grants = nbt.getCompound("skillGrants");
+        for (String k : grants.getAllKeys()) skillGrants.put(k, grants.getInt(k));
         this.decayMinutes.clear();
         CompoundTag decay = nbt.getCompound("decayMinutes");
         for (String k : decay.getAllKeys()) decayMinutes.put(k, decay.getInt(k));

@@ -121,6 +121,7 @@ public final class PerkEventHandler {
         clearDynamicModifiers(player);
         // Навыки: взятая физическая особенность сдвигает Силу или Телосложение (старт).
         faygolover.rpperks.skill.SkillService.syncPhysique(data);
+        faygolover.rpperks.skill.SkillService.syncSkillPerks(data);
 
         if (data.isAdmin()) {
             // В режиме Админа обычные статы не действуют — кэш неактуален и не нужен,

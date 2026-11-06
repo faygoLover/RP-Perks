@@ -43,6 +43,23 @@ public final class SkillGameTests {
         h.succeed();
     }
 
+    /** Умение — стартовый капитал (2.9.0): взял — поднялся до 3; дорос до 5 сам; отказался — выданные 3 ушли, осталось 2. */
+    @GameTest(template = T)
+    public static void skillPerkIsCapital(GameTestHelper h) {
+        PlayerPerks d = new PlayerPerks();
+        SkillDef s = SkillDef.MEDICINE;
+        d.grantPerk(faygolover.rpperks.perk.Perk.FIRST_AID, null);
+        SkillService.syncSkillPerks(d);
+        check(h, SkillService.level(d, s) == 3, "умение подняло до 3, было " + SkillService.level(d, s));
+        SkillService.syncSkillPerks(d);
+        check(h, SkillService.level(d, s) == 3, "второй раз не прибавляет");
+        d.setTrained(s.key(), 5);
+        d.revokePerk(faygolover.rpperks.perk.Perk.FIRST_AID);
+        SkillService.syncSkillPerks(d);
+        check(h, SkillService.level(d, s) == 2, "отказ забрал выданное, было " + SkillService.level(d, s));
+        h.succeed();
+    }
+
     /** Наработанный выше уровня ГМа: наработанный уровень, его опыт + 10 %. */
     @GameTest(template = T)
     public static void migrateTrainedHigher(GameTestHelper h) {
