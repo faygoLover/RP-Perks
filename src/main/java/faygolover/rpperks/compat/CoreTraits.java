@@ -23,6 +23,10 @@ import java.util.Set;
  */
 public final class CoreTraits implements TraitProvider {
 
+    public static final ResourceLocation LUCKY = new ResourceLocation("rpcore", "lucky");
+    public static final ResourceLocation HACKER = new ResourceLocation("rpcore", "hacker");
+    public static final ResourceLocation TECHNOPHOBE = new ResourceLocation("rpcore", "technophobe");
+
     /** Черта RP Core → особенности, которые её дают. */
     @SuppressWarnings("deprecation")
     private static final Map<ResourceLocation, Set<Perk>> TRAITS = buildTraits();
@@ -39,7 +43,8 @@ public final class CoreTraits implements TraitProvider {
         m.put(RpIds.SLOW_HEALING, Set.of(Perk.DELICATE));
         m.put(RpIds.STRONG_IMMUNITY, Set.of(Perk.TOURIST));
         m.put(RpIds.WEAK_IMMUNITY, Set.of(Perk.HOMEBODY));
-        m.put(RpIds.BRAVE, Set.of(Perk.BRAVE, Perk.STRONG_WILLED));
+        // Волевой — только рассудок (RpIds.STRONG_WILLED), храбрость — отдельный перк (решение 06.11, аудит П12)
+        m.put(RpIds.BRAVE, Set.of(Perk.BRAVE));
         m.put(RpIds.COWARD, Set.of(Perk.COWARD));
         // Психика (RP Psyche, Core 0.7.1)
         m.put(RpIds.STRONG_WILLED, Set.of(Perk.STRONG_WILLED));
@@ -67,6 +72,10 @@ public final class CoreTraits implements TraitProvider {
         m.put(RpIds.CLUMSY, Set.of(Perk.CLUMSY));
         m.put(RpIds.CLUMSY_RUNNER, Set.of(Perk.CLUMSY_RUNNER));
         m.put(RpIds.UNLUCKY, Set.of(Perk.UNLUCKY));
+        // Без констант в Core (появятся в Core 0.13.0): Удачливый — Medicine и Sports; Взлом и Технофоб — PDA и RP Fixes
+        m.put(LUCKY, Set.of(Perk.LUCKY));
+        m.put(HACKER, Set.of(Perk.HACKER));
+        m.put(TECHNOPHOBE, Set.of(Perk.TECHNOPHOBE));
         m.put(RpIds.MELEE_FIGHTER, Set.of(Perk.MELEE_FIGHTER));
         // Питание (RP Culinary)
         m.put(RpIds.ANOREXIC, Set.of(Perk.ANOREXIC));

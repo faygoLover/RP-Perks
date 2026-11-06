@@ -236,6 +236,8 @@ public final class PerkEventHandler {
         List<Attribute> attributes = new ArrayList<>(List.of(Attributes.MOVEMENT_SPEED, Attributes.ATTACK_SPEED, Attributes.ATTACK_DAMAGE));
         Attribute regen = Stat.STAMINA_REGEN.getAttribute();
         if (regen != null) attributes.add(regen);
+        Attribute moveCost = Stat.STAMINA_MOVE_COST.getAttribute();  // Путешествие налегке (2.8.1)
+        if (moveCost != null) attributes.add(moveCost);
         for (Attribute attribute : attributes) {
             AttributeInstance instance = player.getAttribute(attribute);
             if (instance == null) continue;

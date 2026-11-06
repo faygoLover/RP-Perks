@@ -32,6 +32,8 @@ public final class PerkCommands {
 
         dispatcher.register(Commands.literal("rpperks")
                 .executes(ctx -> openSelf(ctx.getSource()))
+                .then(Commands.literal("audit").requires(s -> s.hasPermission(ADMIN_LEVEL))
+                        .executes(ctx -> audit(ctx.getSource())))
                 .then(Commands.literal("admin").requires(s -> s.hasPermission(ADMIN_LEVEL))
                         .executes(ctx -> openAdmin(ctx.getSource(), ctx.getSource().getPlayer()))
                         .then(Commands.argument("target", EntityArgument.player())
@@ -43,6 +45,20 @@ public final class PerkCommands {
         faygolover.rpcore.api.RpCoreAPI.registerCommand(Rpperks.MODID, "/rpperks", "commands.rpperks.help.self", 0, false);
         faygolover.rpcore.api.RpCoreAPI.registerCommand(Rpperks.MODID, "/rpperks admin [игрок]", "commands.rpperks.help.admin",
                 ADMIN_LEVEL, false);
+        faygolover.rpcore.api.RpCoreAPI.registerCommand(Rpperks.MODID, "/rpperks audit", "commands.rpperks.help.audit",
+                ADMIN_LEVEL, false);
+    }
+
+    /** Особенности, которые игрок может взять, а механики при нынешнем наборе модов у них нет. */
+    private static int audit(CommandSourceStack source) {
+        java.util.List<String> empty = new java.util.ArrayList<>();
+        for (faygolover.rpperks.perk.Perk p : faygolover.rpperks.perk.Perk.values()) {
+            if (!p.isAvailable() || !faygolover.rpperks.perk.PerkConsumers.empty(p)) continue;
+            empty.add(p.getId() + " (" + String.join(", ", faygolover.rpperks.perk.PerkConsumers.of(p)) + ")");
+        }
+        if (empty.isEmpty()) source.sendSuccess(() -> Component.translatable("commands.rpperks.audit.ok"), false);
+        else source.sendSuccess(() -> Component.translatable("commands.rpperks.audit.empty", String.join("; ", empty)), false);
+        return empty.size();
     }
 
     private static int openSelf(CommandSourceStack source) {

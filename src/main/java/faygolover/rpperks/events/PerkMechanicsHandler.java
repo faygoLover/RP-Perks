@@ -90,15 +90,15 @@ public final class PerkMechanicsHandler {
                 "RP sprint boost", amount, AttributeModifier.Operation.MULTIPLY_TOTAL, active && amount > 0);
     }
 
-    // ---------- Путешествие налегке ----------
+    // ---------- Путешествие налегке: в лёгкой одежде движение дешевле по выносливости (2.8.1; было +10 % скорости) ----------
     private static void tickLightTravel(ServerPlayer player, PlayerPerks data) {
         // Модификатор этой механики выставляется только пока владеешь перком (см. ниже), поэтому у игрока
         // без перка его никогда и не было — не тратим время на lookup атрибута и чтение конфига.
         if (!data.hasPerk(Perk.LIGHT_TRAVEL)) return;
         boolean active = player.getArmorValue() <= Config.get(Config.LIGHT_TRAVEL_MAX_ARMOR);
-        double amount = Config.get(Config.LIGHT_TRAVEL_SPEED_PERCENT) / 100.0;
-        PerkEventHandler.setModifier(player, Attributes.MOVEMENT_SPEED, PerkEventHandler.LIGHT_TRAVEL_UUID,
-                "RP light travel", amount, AttributeModifier.Operation.MULTIPLY_BASE, active);
+        // Без RP Stamina атрибута нет — перк ничего не делает
+        PerkEventHandler.setModifier(player, Stat.STAMINA_MOVE_COST.getAttribute(), PerkEventHandler.LIGHT_TRAVEL_UUID,
+                "RP light travel", Config.get(Config.LIGHT_TRAVEL_MOVE_COST), AttributeModifier.Operation.ADDITION, active);
     }
 
     // ---------- Зависимость от кофеина ----------
@@ -145,6 +145,12 @@ public final class PerkMechanicsHandler {
     // ---------- Анорексичка: предел сытости и таймер отказа ----------
     private static void tickAnorexia(ServerPlayer player, PlayerPerks data) {
         if (!data.hasPerk(Perk.ANOREXIC)) return;
+        // Голодающая не отказывается от еды. С RP Culinary ванильная сытость не падает до 0, поэтому — по стадии
+        // голода Culinary; отказ снимается здесь, на сервере, и уходит клиенту (тот решает по тому же флагу).
+        if (data.isRefuseNextMeal() && player.tickCount % 20 == 0 && starving(player)) {
+            data.setRefuseNextMeal(false);
+            PerkEventHandler.syncToClient(player, data);
+        }
         if (!culinary()) {
             FoodData food = player.getFoodData();
             int maxFood = Config.get(Config.ANOREXIA_MAX_FOOD);
@@ -198,9 +204,17 @@ public final class PerkMechanicsHandler {
         return level.isDay() && !level.isRaining() && level.canSeeSky(BlockPos.containing(player.getEyePosition()));
     }
 
-    // ---------- Чувствительность к солнцу (без RP Medicine — Слабость; с ней — головная боль у неё) ----------
+    /** Голодает: стадия 3 у мода питания, без него — ванильная сытость 0. */
+    private static boolean starving(ServerPlayer player) {
+        var n = faygolover.rpcore.api.RpCoreAPI.nutrition();
+        return culinary() && n != null ? n.hungerStage(player) >= 3 : player.getFoodData().getFoodLevel() <= 0;
+    }
+
+    // ---------- Чувствительность к солнцу: Слабость всегда, с RP Medicine ещё и головная боль у неё ----------
     private static void tickSunSensitive(ServerPlayer player, PlayerPerks data) {
-        if (!data.hasPerk(Perk.SUN_SENSITIVE) || bodyMod() || !inSun(player)) return;
+        if (!data.hasPerk(Perk.SUN_SENSITIVE) || !inSun(player)) return;
+        // Головной убор (любой предмет в слоте головы) защищает
+        if (!player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty()) return;
         player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 0, true, false, true));
     }
 
@@ -442,11 +456,25 @@ public final class PerkMechanicsHandler {
     // Неудачливый
     // =====================================================================
 
-    /** «Магнит для неприятностей»: монстр иногда переключается на Неудачливого. */
+    /**
+     * «Магнит для неприятностей»: монстр иногда переключается на Неудачливого. Удачливый — наоборот: монстр иногда
+     * уходит от него к другому игроку рядом, а если никого нет — теряет его из виду.
+     */
     @SubscribeEvent
     public static void onTargetChange(LivingChangeTargetEvent event) {
         if (!(event.getEntity() instanceof Monster mob)) return;
         if (!(event.getNewTarget() instanceof ServerPlayer current)) return;
+        if (hasPerk(current, Perk.LUCKY)) {
+            if (mob.getRandom().nextDouble() >= Config.get(Config.LUCKY_RETARGET_CHANCE_PERCENT) / 100.0) return;
+            double radius = Config.get(Config.UNLUCKY_RETARGET_RADIUS);
+            ServerPlayer other = mob.level().getEntitiesOfClass(ServerPlayer.class, mob.getBoundingBox().inflate(radius),
+                            p -> p != current && p.isAlive() && !p.isCreative() && !p.isSpectator()
+                                    && !hasPerk(p, Perk.LUCKY) && mob.hasLineOfSight(p))
+                    .stream().min(Comparator.comparingDouble(mob::distanceToSqr)).orElse(null);
+            if (other != null) event.setNewTarget(other);
+            else if (mob.getRandom().nextDouble() < Config.get(Config.LUCKY_LOSE_TARGET_CHANCE_PERCENT) / 100.0) event.setNewTarget(null);
+            return;
+        }
         if (hasPerk(current, Perk.UNLUCKY)) return;
         if (mob.getRandom().nextDouble() >= Config.get(Config.UNLUCKY_RETARGET_CHANCE_PERCENT) / 100.0) return;
 
@@ -459,12 +487,18 @@ public final class PerkMechanicsHandler {
                 .ifPresent(event::setNewTarget);
     }
 
-    /** «Закон подлости»: подвёрнутая нога при падении. */
+    /** «Закон подлости»: подвёрнутая нога при падении. Удачливый — удачно приземлился: урон меньше. */
     @SubscribeEvent
     public static void onFall(LivingFallEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.isCreative()) return;
         if (event.getDistance() < Config.get(Config.UNLUCKY_FALL_MIN_HEIGHT)) return;
         player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
+            if (canLuck(player, data, Config.get(Config.LUCKY_FALL_CHANCE_PERCENT))) {
+                event.setDamageMultiplier(event.getDamageMultiplier() * Config.get(Config.LUCKY_FALL_DAMAGE_MULT).floatValue());
+                player.displayClientMessage(Component.translatable("message.rpperks.lucky.fall"), true);
+                startLuckCooldown(data);
+                return;
+            }
             if (!canMishap(player, data, Config.get(Config.UNLUCKY_FALL_CHANCE_PERCENT))) return;
             // С модом тела — настоящий вывих голеностопа (вправляет медик); без него — замедление.
             var body = faygolover.rpcore.api.RpCoreAPI.body();
@@ -483,6 +517,13 @@ public final class PerkMechanicsHandler {
         ItemStack tool = player.getMainHandItem();
         if (!tool.isDamageableItem()) return;
         player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
+            if (canLuck(player, data, Config.get(Config.LUCKY_TOOL_CHANCE_PERCENT))) {
+                // Прочность за этот блок спишется уже после события — возвращаем её заранее
+                if (tool.getDamageValue() > 0) tool.setDamageValue(tool.getDamageValue() - 1);
+                player.displayClientMessage(Component.translatable("message.rpperks.lucky.tool"), true);
+                startLuckCooldown(data);
+                return;
+            }
             if (!canMishap(player, data, Config.get(Config.UNLUCKY_TOOL_CHANCE_PERCENT))) return;
             int damage = Math.max(1, (int) Math.round(tool.getMaxDamage() * Config.get(Config.UNLUCKY_TOOL_DAMAGE_PERCENT) / 100.0));
             tool.hurtAndBreak(damage, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
@@ -499,6 +540,17 @@ public final class PerkMechanicsHandler {
 
     private static void startMishapCooldown(PlayerPerks data) {
         data.setUnluckyCooldown(Config.get(Config.UNLUCKY_MISHAP_COOLDOWN_MINUTES) * 1200);
+    }
+
+    /** Удачливый: тот же таймер, что у Неудачливого (перки несовместимы, поле одно на обоих). */
+    private static boolean canLuck(ServerPlayer player, PlayerPerks data, double chancePercent) {
+        return data.hasPerk(Perk.LUCKY)
+                && data.getUnluckyCooldown() <= 0
+                && player.getRandom().nextDouble() < chancePercent / 100.0;
+    }
+
+    private static void startLuckCooldown(PlayerPerks data) {
+        data.setUnluckyCooldown(Config.get(Config.LUCKY_COOLDOWN_MINUTES) * 1200);
     }
 
     // =====================================================================

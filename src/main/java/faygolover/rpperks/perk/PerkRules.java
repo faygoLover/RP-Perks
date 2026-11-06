@@ -59,6 +59,12 @@ public final class PerkRules {
     public static Component whyCannotReset(PlayerPerks data) {
         if (data.getResettablePerks().isEmpty()) return reason("nothing_to_reset");
         if (data.getResetTokens() <= 0) return reason("no_reset_token");
+        // Как у отказа: сброс забирает и баллы, которые дали негативные перки (аудит П17)
+        int after = data.getPoints();
+        for (Perk p : data.getResettablePerks()) after -= data.getDelta(p);
+        if (after < 0 && !Config.get(Config.ALLOW_NEGATIVE_BALANCE)) {
+            return Component.translatable("gui.rpperks.reason.no_points_reset", -after);
+        }
         return null;
     }
 

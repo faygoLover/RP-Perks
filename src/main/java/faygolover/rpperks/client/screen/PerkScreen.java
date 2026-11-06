@@ -970,7 +970,9 @@ public class PerkScreen extends Screen {
 
         // Статус над кнопкой — на месте
         List<Status> status = new ArrayList<>();
-        if (owned && perk == Perk.CAFFEINE_ADDICTION && !data.isAdmin()) {
+        // С модом тела ломку ведёт он, свой таймер стоит на нуле — строку «до ломки» не показываем (аудит П7)
+        if (owned && perk == Perk.CAFFEINE_ADDICTION && !data.isAdmin()
+                && !faygolover.rpcore.api.RpCoreAPI.bodyHandles(faygolover.rpcore.api.RpIds.BODY_CAFFEINE)) {
             int remaining = Config.caffeineWithdrawalTicks() - data.getCaffeineTimer();
             status.add(remaining > 0
                     ? new Status(Component.translatable("gui.rpperks.caffeine_left", (remaining + 1199) / 1200), C_DIM)

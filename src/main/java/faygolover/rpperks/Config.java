@@ -47,7 +47,7 @@ public final class Config {
     public static final ForgeConfigSpec.IntValue SOLAR_SPEED_LEVEL;
     public static final ForgeConfigSpec.DoubleValue SOLAR_STAMINA_REGEN_BONUS;
     public static final ForgeConfigSpec.IntValue LIGHT_TRAVEL_MAX_ARMOR;
-    public static final ForgeConfigSpec.DoubleValue LIGHT_TRAVEL_SPEED_PERCENT;
+    public static final ForgeConfigSpec.DoubleValue LIGHT_TRAVEL_MOVE_COST;
 
     public static final ForgeConfigSpec.IntValue ANOREXIA_MAX_FOOD;
     public static final ForgeConfigSpec.DoubleValue ANOREXIA_REFUSE_CHANCE_PERCENT;
@@ -58,6 +58,9 @@ public final class Config {
     public static final ForgeConfigSpec.DoubleValue UNLUCKY_FALL_MIN_HEIGHT;
     public static final ForgeConfigSpec.DoubleValue UNLUCKY_FALL_CHANCE_PERCENT;
     public static final ForgeConfigSpec.IntValue UNLUCKY_SPRAIN_SECONDS;
+    public static final ForgeConfigSpec.DoubleValue LUCKY_RETARGET_CHANCE_PERCENT, LUCKY_LOSE_TARGET_CHANCE_PERCENT, LUCKY_FALL_CHANCE_PERCENT,
+            LUCKY_FALL_DAMAGE_MULT, LUCKY_TOOL_CHANCE_PERCENT;
+    public static final ForgeConfigSpec.IntValue LUCKY_COOLDOWN_MINUTES;
     public static final ForgeConfigSpec.DoubleValue UNLUCKY_TOOL_CHANCE_PERCENT;
     public static final ForgeConfigSpec.DoubleValue UNLUCKY_TOOL_DAMAGE_PERCENT;
     public static final ForgeConfigSpec.IntValue CAFFEINE_WITHDRAWAL_MINUTES;
@@ -165,7 +168,7 @@ public final class Config {
                         " Перки, которые обычный игрок не видит в окне /rpperks и не может взять.",
                         " Операторы (уровень 2+) видят их и выдают через /rpperks admin <ник>.",
                         " Указываются ID перков, например: [\"admin\", \"nerd_rage\"]")
-                .defineListAllowEmpty(List.of("hidden_perks"), List.of("admin"), Config::isString);
+                .defineListAllowEmpty(List.of("hidden_perks"), List.of("admin", "diabetic"), Config::isString);
 
         SERVICE_PERKS = B.comment(
                         " Перки, которые считаются служебными: вкладка «Служебные» у ГМа, взять самому нельзя,",
@@ -179,7 +182,7 @@ public final class Config {
 
         DEFAULTS_VERSION = B.comment(
                         " Служебное: до какой версии уже обновлены значения по умолчанию. Не меняйте.")
-                .defineInRange("defaults_version", 2, 0, 1000);
+                .defineInRange("defaults_version", 3, 0, 1000);
         B.pop();
 
         // =====================================================================
@@ -242,7 +245,7 @@ public final class Config {
         bonus(Perk.SURVIVOR, Stat.MAX_HEALTH, 5.0);
         SURVIVOR_HEAL_MULT = B.comment(" Без Medicine: множитель восстановления здоровья").defineInRange("heal_multiplier", 1.2, 0.0, 10.0);
         B.pop();
-        beginPerk(Perk.TOUGH, "Крепкий: −20 % урона по телу (с Medicine — по частям тела), +1 твёрдость брони, меньше отбрасывает");
+        beginPerk(Perk.TOUGH, "Крепкий: −20 % урона по телу (с Medicine — по частям тела, болевой шок позже), +1 твёрдость брони, меньше отбрасывает");
         bonus(Perk.TOUGH, Stat.ARMOR_TOUGHNESS, 1.0);
         bonus(Perk.TOUGH, Stat.KNOCKBACK_RESISTANCE, 0.2);
         TOUGH_DAMAGE_MULT = B.comment(" Без Medicine: множитель получаемого урона").defineInRange("damage_multiplier", 0.8, 0.0, 10.0);
@@ -260,11 +263,11 @@ public final class Config {
         beginPerk(Perk.FLEET, "Быстроногий: +10 % скорости");
         bonus(Perk.FLEET, Stat.MOVEMENT_SPEED, 10.0);
         B.pop();
-        beginPerk(Perk.LIGHT_TRAVEL, "Путешествие налегке: быстрее в лёгкой броне");
+        beginPerk(Perk.LIGHT_TRAVEL, "Путешествие налегке: в лёгкой одежде бег, прыжки и лестницы тратят меньше выносливости (RP Stamina)");
         LIGHT_TRAVEL_MAX_ARMOR = B.comment(" Бонус действует, пока очков брони не больше N")
                 .defineInRange("max_armor", 6, 0, 30);
-        LIGHT_TRAVEL_SPEED_PERCENT = B.comment(" Прибавка к скорости, % от базы")
-                .defineInRange("movement_speed_percent", 10.0, 0.0, 500.0);
+        LIGHT_TRAVEL_MOVE_COST = B.comment(" Изменение множителя расхода выносливости на движение (-0.15 = на 15% меньше)")
+                .defineInRange("stamina_move_cost", -0.15, -1.0, 0.0);
         B.pop();
         beginPerk(Perk.AGILE, "Ловкий: дальность взаимодействия +1; с RP Medicine и Sports — зоны мини-игр шире. Пара к Плохой координации");
         bonus(Perk.AGILE, Stat.BLOCK_REACH, 1.0);
@@ -274,15 +277,15 @@ public final class Config {
         beginPerk(Perk.FAST_LEARNER, "Быстрообучаемый: больше опыта всех навыков, кроме Силы и Телосложения");
         FAST_LEARNER_XP = B.comment(" Множитель опыта").defineInRange("xp_multiplier", 1.2, 0.0, 10.0);
         B.pop();
-        rpPerk(Perk.QUICK_WORKER, "Расторопный: медицина и готовка на 20 % быстрее (механика — RP Medicine, RP Culinary)");
+        rpPerk(Perk.QUICK_WORKER, "Расторопный: медицинские действия на 20 % быстрее (механика — RP Medicine)");
 
-        rpPerk(Perk.BRAVE, "Храбрый: медленнее поддаётся панике (РП; позже — психика)");
-        rpPerk(Perk.STRONG_WILLED, "Волевой: устойчив к когнитивному воздействию (РП; позже — психика)");
+        rpPerk(Perk.BRAVE, "Храбрый: стресс копится медленнее, руки дрожат меньше (RP Psyche), болевой шок позже (RP Medicine)");
+        rpPerk(Perk.STRONG_WILLED, "Волевой: рассудок меньше страдает от ужасов, внушения и аномалий (RP Psyche)");
         beginPerk(Perk.NERD_RAGE, "При низком здоровье получает Силу и Сопротивление");
         NERD_RAGE_HEALTH_PERCENT = B.comment(" Порог срабатывания: здоровье ниже N% от максимума")
                 .defineInRange("health_threshold_percent", 20.0, 1.0, 100.0);
         NERD_RAGE_EFFECT_LEVEL = B.comment(" Уровень эффектов (1 = I, 2 = II ...)")
-                .defineInRange("effect_level", 2, 1, 10);
+                .defineInRange("effect_level", 1, 1, 10);
         B.pop();
         rpPerk(Perk.ALCOHOLIC, "Закалённый алкоголик: легко переносит алкоголь (РП)");
 
@@ -296,8 +299,21 @@ public final class Config {
                         " Прибавка к множителю восстановления выносливости на солнце (0.5 = на 50% быстрее)")
                 .defineInRange("stamina_regen_bonus", 0.5, 0.0, 10.0);
         B.pop();
-        beginPerk(Perk.LUCKY, "Повышенная удача. Пара к Неудачливому");
+        beginPerk(Perk.LUCKY, "Беды обходят стороной: монстры иногда уходят к другим, удачно приземляется, инструмент не тупится,",
+                "с RP Medicine тяжёлое ранение иногда оказывается средним. Пара к Неудачливому");
         bonus(Perk.LUCKY, Stat.LUCK, 2.0);
+        LUCKY_RETARGET_CHANCE_PERCENT = B.comment(" Шанс, что монстр, выбравший Удачливого, переключится на другого игрока поблизости (не Удачливого)")
+                .defineInRange("retarget_chance_percent", 25.0, 0.0, 100.0);
+        LUCKY_LOSE_TARGET_CHANCE_PERCENT = B.comment(" Если рядом никого нет: шанс, что монстр потеряет Удачливого из виду")
+                .defineInRange("lose_target_chance_percent", 10.0, 0.0, 100.0);
+        LUCKY_COOLDOWN_MINUTES = B.comment(" После любого везения ниже следующее не раньше, чем через N реальных минут (монстров не касается)")
+                .defineInRange("luck_cooldown_minutes", 45, 1, 1440);
+        LUCKY_FALL_CHANCE_PERCENT = B.comment(" Удачное приземление: шанс при падении с той же высоты, что и вывих Неудачливого")
+                .defineInRange("fall_chance_percent", 30.0, 0.0, 100.0);
+        LUCKY_FALL_DAMAGE_MULT = B.comment(" Удачное приземление: множитель урона от падения")
+                .defineInRange("fall_damage_multiplier", 0.5, 0.0, 1.0);
+        LUCKY_TOOL_CHANCE_PERCENT = B.comment(" Инструмент не тратит прочность за сломанный блок: шанс")
+                .defineInRange("tool_chance_percent", 2.0, 0.0, 100.0);
         B.pop();
         beginPerk(Perk.ORGANIZED, "+3 слота инвентаря");
         bonus(Perk.ORGANIZED, Stat.INVENTORY_SLOTS, 3.0);
@@ -321,7 +337,8 @@ public final class Config {
         beginPerk(Perk.EXPLOSIVES, "Взрывчатка 5, тяжёлое оружие 1; создание и обезвреживание взрывных устройств (РП)");
         B.pop();
         rpPerk(Perk.TECHNICIAN, "Работа со сложным оборудованием и техникой, ограниченный ремонт (РП)");
-        rpPerk(Perk.HACKER, "Взлом замков, электронных систем, дверей и терминалов (РП)");
+        rpPerk(Perk.HACKER, "Взлом: только он вскрывает замки Survivor's Arsenal и Cuffed (RP Fixes); при взломе КПК +1 попытка,",
+                "при расшифровке заметок больше времени (RP PDA)");
         rpPerk(Perk.COOK, "Кулинария 5: хорошие блюда, сложные рецепты (уровень — skill_system.perk_skills; с RP Culinary — качество блюд)");
         beginPerk(Perk.BASIC_TRAINING, "Курс молодого бойца: короткоствольное и длинноствольное 2, ближний бой 1, медицина 1");
         B.pop();
@@ -466,12 +483,13 @@ public final class Config {
         beginPerk(Perk.DELICATE, "Нежный. С RP Medicine: заживление −20 %, кровопотеря +20 %, боль +20 %. Без неё: медленнее восстанавливает здоровье");
         DELICATE_HEAL_MULT = B.comment(" Без Medicine: множитель восстановления здоровья").defineInRange("heal_multiplier", 0.8, 0.0, 10.0);
         B.pop();
-        beginPerk(Perk.FRAGILE, "Хрупкий: +20 % урона по телу (с Medicine — по частям тела), сильнее отбрасывает");
+        beginPerk(Perk.FRAGILE, "Хрупкий: +20 % урона по телу (с Medicine — по частям тела, кости ломаются легче, болевой шок раньше), сильнее отбрасывает");
         FRAGILE_DAMAGE_MULT = B.comment(" Без Medicine: множитель получаемого урона").defineInRange("damage_multiplier", 1.2, 0.0, 10.0);
         FRAGILE_KNOCKBACK_PERCENT = B.comment(" Насколько сильнее отбрасывает, %").defineInRange("knockback_percent", 20.0, 0.0, 500.0);
         B.pop();
         rpPerk(Perk.AMPUTEE, "Ампутант: старт без руки или ноги (механика — RP Medicine)");
-        rpPerk(Perk.DIABETIC, "Требуется ежедневная доза инсулина (с RP Medicine — настоящий сахар в крови, иначе РП)");
+        rpPerk(Perk.DIABETIC, "Требуется ежедневная доза инсулина (с RP Medicine — настоящий сахар в крови, иначе РП).",
+                "Скрыт по умолчанию (hidden_perks), пока сахар не переведён на RP-сутки");
 
         beginPerk(Perk.WEAK_STOMACH, "Слабый желудок: травится чаще. Без RP Culinary — иногда тошнит от любой еды");
         WEAK_STOMACH_CHANCE_PERCENT = B.comment(" Без Culinary: шанс после еды получить Голод на 15 с").defineInRange("vanilla_sick_chance_percent", 5.0, 0.0, 100.0);
@@ -513,15 +531,16 @@ public final class Config {
         beginPerk(Perk.SLOW_LEARNER, "Плохообучаемый: меньше опыта всех навыков, кроме Силы и Телосложения");
         SLOW_LEARNER_XP = B.comment(" Множитель опыта").defineInRange("xp_multiplier", 0.8, 0.0, 10.0);
         B.pop();
-        rpPerk(Perk.SLOW_WORKER, "Медлительный: медицина и готовка на 20 % медленнее (механика — RP Medicine, RP Culinary)");
+        rpPerk(Perk.SLOW_WORKER, "Медлительный: медицинские действия на 20 % медленнее (механика — RP Medicine)");
         rpPerk(Perk.ILLITERATE, "Неграмотный: не читает тексты (с RP PDA — сообщения каракулями, иначе РП)");
 
-        rpPerk(Perk.COWARD, "Трусливый: быстро поддаётся панике (РП; позже — психика)");
-        rpPerk(Perk.SUGGESTIBLE, "Внушаемый: легче поддаётся когнитивному воздействию (РП; позже — психика)");
+        rpPerk(Perk.COWARD, "Трусливый: стресс копится быстрее, руки дрожат сильнее (RP Psyche), болевой шок раньше (RP Medicine)");
+        rpPerk(Perk.SUGGESTIBLE, "Внушаемый: рассудок сильнее страдает от ужасов, внушения и аномалий (RP Psyche)");
         rpPerk(Perk.HEMOPHOBIC, "Гемофоб: паника при виде крови (с RP Medicine — лечение с кровью труднее, иначе РП)");
         beginPerk(Perk.PACIFIST, "Не воюет с людьми: урон по людям сильно снижен, боевые навыки не выше 1 и почти не растут; мирные навыки учит быстрее");
         B.pop();
-        beginPerk(Perk.CAFFEINE_ADDICTION, "Без кофеина падает скорость бега и атаки. После сна — сразу ломка");
+        beginPerk(Perk.CAFFEINE_ADDICTION, "Без кофеина — ломка. С RP Medicine её ведёт Medicine (числа и время — в её конфиге),",
+                "числа ниже — только без неё");
         CAFFEINE_WITHDRAWAL_MINUTES = B.comment(" Через сколько реальных минут без кофеина начинается ломка")
                 .defineInRange("withdrawal_minutes", 60, 1, 1440);
         CAFFEINE_SPEED_PENALTY_PERCENT = B.comment(" Штраф к скорости во время ломки, %")
@@ -534,7 +553,7 @@ public final class Config {
         B.pop();
         rpPerk(Perk.ALCOHOL_ADDICT, "Алкоголик: без алкоголя — стресс, потом ломка (механика — RP Medicine, иначе РП)");
         rpPerk(Perk.SMOKER, "Курильщик: без курения настроение хуже, ломка (механика — RP Medicine, иначе РП)");
-        rpPerk(Perk.TEETOTALER, "Не переносит алкоголь (РП)");
+        rpPerk(Perk.TEETOTALER, "Непьющий: пьянеет вдвое быстрее (механика — RP Medicine, иначе РП)");
         beginPerk(Perk.CANNIBAL, "Каннибал: человечина — обычная еда, без удара по рассудку и болезни (механика — RP Culinary).",
                 "Негативный, но баллы не даёт, а стоит (cost); остаётся во вкладке негативных");
         B.pop();
@@ -543,7 +562,8 @@ public final class Config {
         beginPerk(Perk.HOMEBODY, "Домашний: пониженная устойчивость к температуре (LSO). С RP Medicine — иммунитет слабее");
         bonus(Perk.HOMEBODY, Stat.THERMAL_RESISTANCE, -2.0);
         B.pop();
-        beginPerk(Perk.SUN_SENSITIVE, "Чувствительность к солнцу: днём под открытым небом болит голова (с RP Medicine), без неё — Слабость");
+        beginPerk(Perk.SUN_SENSITIVE, "Чувствительность к солнцу: днём под открытым небом без головного убора — Слабость,",
+                "с RP Medicine ещё и головная боль");
         B.pop();
         beginPerk(Perk.UNLUCKY, "Неприятности случаются именно с вами");
         bonus(Perk.UNLUCKY, Stat.LUCK, -2.0);
@@ -572,7 +592,8 @@ public final class Config {
         bonus(Perk.DISORGANIZED, Stat.INVENTORY_SLOTS, -3.0);
         B.pop();
 
-        rpPerk(Perk.TECHNOPHOBE, "Боится и не понимает сложную технику и электронику (РП)");
+        rpPerk(Perk.TECHNOPHOBE, "Боится и не понимает сложную технику: не взламывает и не шифрует КПК, не перестраивает рацию,",
+                "карты в считывателях проходят не с первого раза (RP PDA, RP Fixes)");
         rpPerk(Perk.KITCHEN_NIGHTMARE, "Кухонный кошмар: готовит на 3 уровня Кулинарии хуже, чаще подгорает (нужен RP Culinary)");
         B.pop();
 
@@ -603,7 +624,7 @@ public final class Config {
                         "puny = out_of_shape, fit, athletic",
                         "early_bird = night_owl",
                         "deep_sleeper = light_sleeper",
-                        "short_sleeper = insomnia",
+                        "short_sleeper = insomnia, sleepyhead",
                         "out_of_shape = fit, athletic, emaciated, obese",
                         "fit = athletic, emaciated, overweight, obese",
                         "athletic = emaciated, overweight, obese, weakling, asthmatic, turtle, clumsy_runner",
@@ -641,7 +662,8 @@ public final class Config {
                         "lucky = unlucky",
                         "organized = disorganized",
                         "technophobe = technician, hacker, pilot",
-                        "kitchen_nightmare = cook, dietitian, field_cook"
+                        "kitchen_nightmare = cook, dietitian, field_cook, preserver",
+                        "illiterate = medic, hacker"
                 ), Config::isString);
         B.pop();
 
@@ -728,6 +750,28 @@ public final class Config {
         return n;
     }
 
+    /** Пары несовместимостей, добавленные в 2.8.1 (к своему списку сервера дописываются). */
+    private static final List<String> CONFLICTS_281 = List.of("short_sleeper = sleepyhead", "kitchen_nightmare = preserver",
+            "illiterate = medic, hacker");
+
+    /**
+     * 2.8.1 (предложения 06.11): Бешенство ботаника I вместо II, Диабетик скрыт, три новые несовместимости.
+     * Как и 2.0.0 — один раз; число Бешенства меняется, только если осталось прежним по умолчанию.
+     */
+    private static int upgradeDefaults3() {
+        if (DEFAULTS_VERSION.get() >= 3) return 0;
+        DEFAULTS_VERSION.set(3);
+        int n = 1;
+        if (NERD_RAGE_EFFECT_LEVEL.get() == 2) { NERD_RAGE_EFFECT_LEVEL.set(1); n++; }
+        List<String> hidden = new ArrayList<>(HIDDEN_PERKS.get());
+        if (hidden.stream().noneMatch(h -> h.trim().equals("diabetic"))) { hidden.add("diabetic"); HIDDEN_PERKS.set(hidden); n++; }
+        List<String> pairs = new ArrayList<>(CONFLICTS.get());
+        pairs.addAll(CONFLICTS_281);
+        CONFLICTS.set(pairs);
+        SPEC.save();
+        return n + 1;
+    }
+
     private static int upgradeBonus(Perk perk, Stat stat, double oldDef, double newDef) {
         Map<Stat, ForgeConfigSpec.DoubleValue> m = BONUSES.get(perk);
         ForgeConfigSpec.DoubleValue v = m == null ? null : m.get(stat);
@@ -758,7 +802,7 @@ public final class Config {
     }
 
     /** Перк без настраиваемых эффектов — только цена. */
-    private static void rpPerk(Perk perk, String description) {
+    private static void rpPerk(Perk perk, String... description) {
         beginPerk(perk, description);
         B.pop();
     }
@@ -852,6 +896,8 @@ public final class Config {
         if (upgraded) Rpperks.LOGGER.info("[RP Perks] Таблицы стрельбы обновлены до новых значений по умолчанию (09.10.2026)");
         int changed = upgradeDefaults2();
         if (changed > 0) Rpperks.LOGGER.info("[RP Perks] 2.0.0: {} значений по умолчанию обновлено (цены и числа особенностей). Свои правки не тронуты.", changed);
+        changed = upgradeDefaults3();
+        if (changed > 0) Rpperks.LOGGER.info("[RP Perks] 2.8.1: {} значений по умолчанию обновлено (Бешенство ботаника, Диабетик скрыт, несовместимости).", changed);
 
         // Предметы с кофеином
         Set<ResourceLocation> items = new HashSet<>();
