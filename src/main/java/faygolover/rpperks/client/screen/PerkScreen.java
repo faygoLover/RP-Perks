@@ -5,11 +5,6 @@ import faygolover.rpperks.Config;
 import faygolover.rpperks.capability.PlayerPerks;
 import faygolover.rpperks.capability.PlayerPerksProvider;
 import faygolover.rpperks.client.ClientPerkData;
-import faygolover.rpperks.figure.FigureNetwork;
-import faygolover.rpperks.figure.FigureStore;
-import faygolover.rpperks.figure.client.FigureClient;
-import faygolover.rpperks.figure.client.FigurePreview;
-import faygolover.rpperks.figure.client.FigureSlider;
 import faygolover.rpperks.network.NetworkHandler;
 import faygolover.rpperks.network.PerkActionPacket;
 import faygolover.rpperks.network.PerkActionPacket.Action;
@@ -25,7 +20,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -126,15 +120,6 @@ public class PerkScreen extends Screen {
     private String tasteFav = "", tasteDis = "";
     private boolean tasteOnly;
     @Nullable private Button favButton, disButton, tasteButton;
-    /**
-     * Фигура (размер груди, пакет figure): в правой панели — крупное превью с вращением и ползунок. В форме анкеты
-     * сохраняется вместе с ней; кто заполнил анкету раньше — выбирает один раз в строке «Анкета»; дальше — ГМ.
-     */
-    @Nullable private FigurePreview figurePreview;
-    @Nullable private FigureSlider figureSlider;
-    @Nullable private Button figureSaveButton;
-    private float figureSize = FigureStore.DEFAULT_SIZE;
-    private boolean figureLoaded, figureAsked;
 
     public PerkScreen(boolean adminMode, UUID targetId, String targetName, boolean canSeeHidden) {
         super(adminMode
@@ -292,25 +277,6 @@ public class PerkScreen extends Screen {
             if (builtProfileOnly && !profLoaded) loadProfile(ownProfile());
         }
 
-        // Фигура: превью и ползунок внизу правой панели (форма анкеты и строка «Анкета»)
-        int sliderY = infoY + infoH - BTN - 4;
-        int previewH = Math.max(80, infoH * 3 / 5);
-        figurePreview = addRenderableWidget(new FigurePreview(infoX + 1, sliderY - 2 - previewH, infoW - 2, previewH,
-                this::figureEntity, this::figurePreviewSize));
-        figureSlider = addRenderableWidget(new FigureSlider(infoX + 4, sliderY, infoW - 8, BTN, figureSize, v -> figureSize = v));
-        figureSaveButton = null;
-        if (!adminMode && !builtProfileOnly) {
-            int half = (infoW - 10) / 2;
-            figureSlider.setWidth(half);
-            figureSaveButton = addRenderableWidget(Button.builder(Component.empty(), b -> onSaveFigure())
-                    .bounds(infoX + 6 + half, sliderY, half, BTN).build());
-        }
-        if (adminMode && !figureAsked) {
-            FigureNetwork.sendToServer(new FigureNetwork.Ask(targetId));
-            figureAsked = true;
-        }
-        if (!figureLoaded) loadFigure();
-
         resetButton = null;
         wipeButton = null;
         selectionButton = null;
@@ -402,7 +368,6 @@ public class PerkScreen extends Screen {
         if (adminMode) {
             if (!confirm("profile")) return;
             send(Action.ADMIN_PROFILE, null, Action.packProfile(profSex.ordinal(), profAge, profHeight));
-            if (profSex == BodyProfile.Sex.FEMALE) FigureNetwork.sendToServer(new FigureNetwork.Set(targetId, figureSize));
             playClick();
             return;
         }
@@ -417,54 +382,8 @@ public class PerkScreen extends Screen {
         }
         if (ownProfile().filled() || !confirm("profile")) return;
         faygolover.rpcore.api.RpCoreAPI.submitProfile(profSex, profAge, profHeight);
-        if (profSex == BodyProfile.Sex.FEMALE) FigureNetwork.sendToServer(new FigureNetwork.Set(targetId, figureSize));
         // Вкусы необязательны: не выбраны — выберет позже кнопкой «Вкусы…».
         if (!tasteFav.isEmpty()) faygolover.rpcore.api.RpCoreAPI.submitTaste(tasteFav, tasteDis);
-        playClick();
-    }
-
-    // ---------- Фигура ----------
-
-    /** Размер с сервера (свой или игрока у ГМа) — в ползунок, когда пришёл. */
-    private void loadFigure() {
-        FigureClient.Info info = FigureClient.info(targetId);
-        if (info == null) return;
-        figureSize = info.size();
-        figureLoaded = true;
-        if (figureSlider != null) figureSlider.setSize(figureSize);
-    }
-
-    /** Свой размер ещё не выбран (анкета заполнена раньше), пол женский — можно выбрать один раз. */
-    private boolean figureChoosable() {
-        if (adminMode || builtProfileOnly) return false;
-        FigureClient.Info info = FigureClient.info(targetId);
-        return info != null && !info.chosen() && ownProfile().sex() == BodyProfile.Sex.FEMALE;
-    }
-
-    private boolean figureShown() {
-        return (profileForm() && !tasteOnly) || (profileSelected && tab == Tab.MINE);
-    }
-
-    private boolean figureSliderShown() {
-        if (profileForm() && !tasteOnly) return profSex == BodyProfile.Sex.FEMALE;
-        return profileSelected && tab == Tab.MINE && figureChoosable();
-    }
-
-    @Nullable
-    private LivingEntity figureEntity() {
-        return adminMode ? FigurePreview.byId(targetId) : Minecraft.getInstance().player;
-    }
-
-    /** Размер для превью: из ползунка; в форме анкеты без женского пола — без груди; иначе — как видят все (−1). */
-    private double figurePreviewSize() {
-        if (figureSliderShown()) return figureSize;
-        if (profileForm()) return 0;
-        return -1;
-    }
-
-    private void onSaveFigure() {
-        if (!figureChoosable() || !confirm("figure")) return;
-        FigureNetwork.sendToServer(new FigureNetwork.Set(targetId, figureSize));
         playClick();
     }
 
@@ -474,10 +393,7 @@ public class PerkScreen extends Screen {
 
     private void selectTab(Tab t) {
         tab = t;
-        if (t == Tab.PROFILE) {
-            loadProfile(shownProfile());
-            loadFigure();
-        }
+        if (t == Tab.PROFILE) loadProfile(shownProfile());
         scroll = 0;
         infoScroll = 0;
         profileSelected = false;
@@ -489,7 +405,6 @@ public class PerkScreen extends Screen {
     public void tick() {
         super.tick();
         if (pendingKey != null && Util.getMillis() > pendingUntil) pendingKey = null;
-        if (!figureLoaded) loadFigure();
         // Анкету сохранили (пришла с сервера) — открыть остальное окно.
         if (builtProfileOnly != profileOnly()) {
             tab = Tab.MINE;
@@ -516,15 +431,6 @@ public class PerkScreen extends Screen {
                     : !pairOk ? Component.translatable("gui.rpperks.taste.need_pair")
                     : Component.translatable(adminMode ? "gui.rpperks.profile.admin_save"
                             : tasteOnly ? "gui.rpperks.taste.save" : "gui.rpperks.profile.save"));
-        }
-
-        if (figurePreview != null) figurePreview.visible = figureShown();
-        if (figureSlider != null) figureSlider.visible = figureSliderShown();
-        if (figureSaveButton != null) {
-            figureSaveButton.visible = figureSlider != null && figureSlider.visible && profileSelected;
-            figureSaveButton.setMessage(isPending("figure")
-                    ? Component.translatable("gui.rpperks.button.confirm")
-                    : Component.translatable("gui.rpperks.figure.save"));
         }
 
         if (blockButton != null) {
@@ -1011,11 +917,6 @@ public class PerkScreen extends Screen {
         }
     }
 
-    /** Текст правой панели кончается над превью фигуры, если оно видно. */
-    private int figureTextBottom(int bottom) {
-        return figurePreview != null && figurePreview.visible ? figurePreview.getY() - 2 : bottom;
-    }
-
     private void renderInfo(GuiGraphics g, PlayerPerks data) {
         int x = infoX + 6;
         int w = infoW - 12;
@@ -1034,11 +935,7 @@ public class PerkScreen extends Screen {
                 gap(6);
                 text(Component.translatable("gui.rpperks.taste.hint"), C_DIM, w);
             }
-            if (profSex == BodyProfile.Sex.FEMALE) {
-                gap(6);
-                text(Component.translatable("gui.rpperks.figure.hint"), C_DIM, w);
-            }
-            drawContent(g, x, y0, figureTextBottom(bottom));
+            drawContent(g, x, y0, bottom);
             return;
         }
         if (tab == Tab.SKILLS) {
@@ -1048,11 +945,7 @@ public class PerkScreen extends Screen {
         }
         if (profileSelected) {
             renderProfileInfo(w);
-            if (figureChoosable()) {
-                gap(6);
-                text(Component.translatable("gui.rpperks.figure.once"), C_WARN, w);
-            }
-            drawContent(g, x, y0, figureTextBottom(bottom));
+            drawContent(g, x, y0, bottom);
             return;
         }
         if (selected == null) {

@@ -350,10 +350,5 @@
   "perk.rpperks.heavy_waking.name": "§cHeavy Waking",
   "perk.rpperks.heavy_waking.desc": "Sluggish for a minute after waking: walks slower, cannot sprint.",
   "perk.rpperks.snorer.name": "§cSnorer",
-  "perk.rpperks.snorer.desc": "Snores in his sleep — audible within 8 blocks, wakes light sleepers nearby.",
-  "gui.rpperks.figure.size": "Chest: %s %%",
-  "gui.rpperks.figure.save": "Save appearance",
-  "gui.rpperks.figure.hint": "Chest: set the size with the slider below and see it on the preview (drag to rotate). Chosen once with the profile, later only a GM can change it.",
-  "gui.rpperks.figure.once": "Chest size is not chosen yet: set it with the slider below and save. You can choose once, later only a GM can change it.",
-  "gui.rpperks.figure.no_preview": "Player is too far - no preview"
+  "perk.rpperks.snorer.desc": "Snores in his sleep — audible within 8 blocks, wakes light sleepers nearby."
 }
