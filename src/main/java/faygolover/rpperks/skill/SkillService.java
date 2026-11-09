@@ -117,7 +117,13 @@ public final class SkillService {
     /** ГМ (/rpcore skill): уровень с сохранением доли до следующего; {@code level < 0} — вернуть к стартовому. */
     public static void setLevel(PlayerPerks d, SkillDef s, int level) {
         if (level < 0) {
-            d.clearTrained(s.key());
+            int capital = s.kind == SkillDef.Kind.PHYSICAL ? 0 : perkCapital(d, s);
+            if (capital > 0) {
+                d.setTrained(s.key(), capital);
+                d.setSkillXp(s.key(), 0);
+            } else {
+                d.clearTrained(s.key());
+            }
             return;
         }
         double p = progress(d, s);
@@ -409,11 +415,11 @@ public final class SkillService {
 
     /**
      * Умения — стартовый капитал (2.9.0). Взятое умение один раз поднимает наработанный уровень до своего (ниже не
-     * опускает), запоминая прежний. Снятое (жетон отказа, ГМ) забирает выданное: уровень опускается на столько, сколько
-     * умение дало, но не ниже прежнего — наработанное сверху остаётся. Старые сохранения при первом входе получают
-     * отметку без изменений: раньше умение и так держало минимум.
+     * опускает), запоминая, сколько дало. Снятое (жетон отказа, ГМ) забирает выданное, но не ниже уровня оставшихся
+     * умений, а незабранное переходит на самое сильное из них: порядок снятия на итог не влияет.
      */
     public static void syncSkillPerks(PlayerPerks d) {
+        if (d.takeSkillGrantsOutdated()) migrateSkillGrants(d);
         var grants = d.skillGrants();
         for (Perk perk : Perk.values()) {
             // owns, а не «действует»: режим Админа не должен забирать капитал.
@@ -422,23 +428,76 @@ public final class SkillService {
                 SkillDef s = e.getKey();
                 if (s.kind == SkillDef.Kind.PHYSICAL) continue;
                 String key = perk.getId() + "/" + s.key();
-                Integer before = grants.get(key);
-                if (owns && before == null) {
+                Integer given = grants.get(key);
+                if (owns && given == null) {
                     int t = Math.max(0, d.getTrained(s.key()));
-                    grants.put(key, t);
-                    if (t < e.getValue()) {
+                    int add = Math.max(0, e.getValue() - t);
+                    grants.put(key, add);
+                    if (add > 0) {
                         d.setTrained(s.key(), e.getValue());
                         d.setSkillXp(s.key(), 0);
                     }
-                } else if (!owns && before != null) {
+                } else if (!owns && given != null) {
                     grants.remove(key);
                     int t = Math.max(0, d.getTrained(s.key()));
-                    int given = Math.max(0, e.getValue() - before);
-                    int lvl = Math.max(before, t - given);
+                    Perk holder = strongestGrant(d, s);
+                    int floor = holder == null ? 0 : Config.getPerkSkills(holder).get(s);
+                    int lvl = Math.min(t, Math.max(floor, t - given));
                     if (lvl != t) {
                         d.setTrained(s.key(), lvl);
                         d.setSkillXp(s.key(), 0);
                     }
+                    int kept = given - (t - lvl);
+                    if (kept > 0 && holder != null) grants.merge(holder.getId() + "/" + s.key(), kept, Integer::sum);
+                }
+            }
+        }
+    }
+
+    /** Самое сильное умение на этот навык из взятых и уже учтённых; null — таких нет. */
+    private static Perk strongestGrant(PlayerPerks d, SkillDef s) {
+        Perk best = null;
+        int bestLevel = 0;
+        for (Perk perk : Perk.values()) {
+            Integer level = Config.getPerkSkills(perk).get(s);
+            if (level == null || level <= bestLevel || !d.owns(perk) || !d.skillGrants().containsKey(perk.getId() + "/" + s.key())) continue;
+            best = perk;
+            bestLevel = level;
+        }
+        return best;
+    }
+
+    /** Уровень, который дают взятые умения; 0 — ни одного. */
+    private static int perkCapital(PlayerPerks d, SkillDef s) {
+        int capital = 0;
+        for (Perk perk : Perk.values()) {
+            Integer level = Config.getPerkSkills(perk).get(s);
+            if (level != null && d.owns(perk)) capital = Math.max(capital, level);
+        }
+        return capital;
+    }
+
+    /**
+     * Сохранения до капитала: умение держало минимум, и наработанный уровень часто уже поднят до него. Уровень до умения
+     * неизвестен, поэтому всё до уровня умения считаем выданным: отказ забирает выданное, наработанное выше остаётся.
+     */
+    private static void migrateSkillGrants(PlayerPerks d) {
+        var grants = d.skillGrants();
+        grants.clear();
+        for (SkillDef s : SkillDef.VALUES) {
+            if (s.kind == SkillDef.Kind.PHYSICAL) continue;
+            java.util.List<Perk> owned = new java.util.ArrayList<>();
+            for (Perk perk : Perk.values()) if (d.owns(perk) && Config.getPerkSkills(perk).containsKey(s)) owned.add(perk);
+            owned.sort(java.util.Comparator.comparingInt(p -> Config.getPerkSkills(p).get(s)));
+            int sum = 0;
+            for (Perk perk : owned) {
+                int level = Config.getPerkSkills(perk).get(s), t = Math.max(0, d.getTrained(s.key()));
+                int add = t >= level ? Math.max(0, level - sum) : level - t;
+                grants.put(perk.getId() + "/" + s.key(), add);
+                sum += add;
+                if (t < level) {
+                    d.setTrained(s.key(), level);
+                    d.setSkillXp(s.key(), 0);
                 }
             }
         }

@@ -40,12 +40,14 @@ public class PlayerPerks {
     private final Map<String, Double> skillXp = new java.util.HashMap<>();
     /** Физические перки, стартовый уровень которых уже применён (Силач → Сила 7 и т. п.). */
     private final Set<String> physiqueApplied = new java.util.HashSet<>();
-    /** Умения — стартовый капитал (2.9.0): «перк/навык» → наработанный уровень до того, как умение его подняло. */
+    /** Умения — стартовый капитал (2.9.0): «перк/навык» → сколько уровней сейчас держится на этом умении. */
     private final Map<String, Integer> skillGrants = new java.util.HashMap<>();
     /** Минут подряд, пока действует причина потери Силы и Телосложения (мало белка, голод, болезнь…). */
     private final Map<String, Integer> decayMinutes = new java.util.HashMap<>();
-    /** Версия данных: 2 — особенности 2.0.0. */
-    private static final int DATA_VERSION = 2;
+    /** Версия данных: 2 — особенности 2.0.0, 3 — умения как капитал. */
+    private static final int DATA_VERSION = 3;
+    /** Сохранение до версии 3: выданное умениями ещё надо посчитать. */
+    private boolean skillGrantsOutdated;
     /** 2.0.0: сколько старых особенностей снято с возвратом очков (-1 — сообщать нечего). Не синхронизируется. */
     private int migrationRefunded = -1;
     /** Клиент: итоговые уровни, опыт (доля) и источник по навыкам — из пакета навыков. */
@@ -187,6 +189,13 @@ public class PlayerPerks {
     }
     /** Выданные умениями уровни: ключ «перк/навык» → уровень до выдачи. */
     public Map<String, Integer> skillGrants() { return skillGrants; }
+
+    /** Один раз true после загрузки сохранения до версии 3. */
+    public boolean takeSkillGrantsOutdated() {
+        boolean v = skillGrantsOutdated;
+        skillGrantsOutdated = false;
+        return v;
+    }
     public int getDecayMinutes(String cause) { return decayMinutes.getOrDefault(cause, 0); }
     public void setDecayMinutes(String cause, int minutes) {
         if (minutes <= 0) decayMinutes.remove(cause);
@@ -266,6 +275,7 @@ public class PlayerPerks {
         this.physiqueApplied.addAll(source.physiqueApplied);
         this.skillGrants.clear();
         this.skillGrants.putAll(source.skillGrants);
+        this.skillGrantsOutdated = source.skillGrantsOutdated;
         this.decayMinutes.clear();
         this.decayMinutes.putAll(source.decayMinutes);
         this.migrationRefunded = source.migrationRefunded;
@@ -311,7 +321,7 @@ public class PlayerPerks {
         CompoundTag decay = new CompoundTag();
         decayMinutes.forEach(decay::putInt);
         nbt.put("decayMinutes", decay);
-        nbt.putInt("perksVersion", DATA_VERSION);
+        nbt.putInt("perksVersion", skillGrantsOutdated ? 2 : DATA_VERSION);
         nbt.putInt("migrationRefunded", migrationRefunded);
     }
 
@@ -348,6 +358,7 @@ public class PlayerPerks {
         this.migrationRefunded = nbt.contains("migrationRefunded") ? nbt.getInt("migrationRefunded") : -1;
         this.perks.clear();
         int version = nbt.getInt("perksVersion");
+        this.skillGrantsOutdated = version < 3;
 
         if (nbt.contains("perk_entries", Tag.TAG_LIST)) {
             ListTag list = nbt.getList("perk_entries", Tag.TAG_COMPOUND);

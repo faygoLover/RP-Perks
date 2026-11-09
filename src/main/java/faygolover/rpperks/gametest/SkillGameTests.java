@@ -60,6 +60,47 @@ public final class SkillGameTests {
         h.succeed();
     }
 
+    /** Два умения на один навык: итог не зависит от порядка снятия, наработанное сверху остаётся. */
+    @GameTest(template = T)
+    public static void skillPerksStackInAnyOrder(GameTestHelper h) {
+        var soldier = faygolover.rpperks.perk.Perk.SOLDIER;
+        var firstAid = faygolover.rpperks.perk.Perk.FIRST_AID;
+        SkillDef s = SkillDef.MEDICINE;
+        for (boolean soldierFirst : new boolean[]{true, false}) {
+            PlayerPerks d = new PlayerPerks();
+            d.grantPerk(soldier, null);
+            SkillService.syncSkillPerks(d);
+            d.grantPerk(firstAid, null);
+            SkillService.syncSkillPerks(d);
+            check(h, SkillService.level(d, s) == 3, "оба умения дают 3, было " + SkillService.level(d, s));
+            d.setTrained(s.key(), 4);
+            d.revokePerk(soldierFirst ? soldier : firstAid);
+            SkillService.syncSkillPerks(d);
+            d.revokePerk(soldierFirst ? firstAid : soldier);
+            SkillService.syncSkillPerks(d);
+            check(h, SkillService.level(d, s) == 1, "остался только наработанный уровень, было " + SkillService.level(d, s));
+        }
+        h.succeed();
+    }
+
+    /** Старое сохранение: уровень уже поднят до умения, отказ забирает выданное; сброс ГМа возвращает к уровню умения. */
+    @GameTest(template = T)
+    public static void oldSaveRefusalTakesCapital(GameTestHelper h) {
+        PlayerPerks d = new PlayerPerks();
+        d.loadNBT(new net.minecraft.nbt.CompoundTag());
+        SkillDef s = SkillDef.MEDICINE;
+        d.grantPerk(faygolover.rpperks.perk.Perk.FIRST_AID, null);
+        d.setTrained(s.key(), 3);
+        SkillService.syncSkillPerks(d);
+        SkillService.setLevel(d, s, 7);
+        SkillService.setLevel(d, s, -1);
+        check(h, SkillService.level(d, s) == 3, "сброс ГМа к уровню умения, было " + SkillService.level(d, s));
+        d.revokePerk(faygolover.rpperks.perk.Perk.FIRST_AID);
+        SkillService.syncSkillPerks(d);
+        check(h, SkillService.level(d, s) == 0, "отказ забрал выданное, было " + SkillService.level(d, s));
+        h.succeed();
+    }
+
     /** Наработанный выше уровня ГМа: наработанный уровень, его опыт + 10 %. */
     @GameTest(template = T)
     public static void migrateTrainedHigher(GameTestHelper h) {
