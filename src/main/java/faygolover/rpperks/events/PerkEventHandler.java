@@ -94,6 +94,7 @@ public final class PerkEventHandler {
     public static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> syncToClient(player, data));
+            faygolover.rpperks.skill.SkillService.sync(player);
         }
     }
 
