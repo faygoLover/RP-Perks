@@ -356,5 +356,7 @@
   "gui.rpperks.reason.no_points_reset": "The balance would go %s below zero after a reset — ask a GM",
   "commands.rpperks.help.audit": "Perks that currently lack a mod with their mechanics",
   "commands.rpperks.audit.ok": "§aEvery available perk has mechanics or is deliberately RP-only.",
-  "commands.rpperks.audit.empty": "§eNo mechanics (mod needed): §f%s"
+  "commands.rpperks.audit.empty": "§eNo mechanics (mod needed): §f%s",
+  "gui.rpperks.button.character_wipe": "Wipe character",
+  "gui.rpperks.button.character_wipe_sure": "Really erase all?"
 }

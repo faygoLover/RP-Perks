@@ -115,6 +115,16 @@ public final class PerkEventHandler {
     }
 
     /** Полный пересчёт: база из конфига + изменения от перков (или ванильные значения в режиме Админа). */
+    /** Вайп персонажа (RP Core): карточка как у нового. */
+    @SubscribeEvent
+    public static void onCharacterWipe(faygolover.rpcore.api.event.RpCharacterWipeEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
+            data.wipe();
+            refreshPlayer(player, data);
+        });
+    }
+
     public static void refreshPlayer(ServerPlayer player, PlayerPerks data) {
         float oldHealth = player.getHealth();
         boolean wasFullHealth = oldHealth >= player.getMaxHealth();

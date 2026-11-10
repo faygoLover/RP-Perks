@@ -26,6 +26,7 @@ public class PerkActionPacket {
         ADMIN_TOGGLE_BLOCK,
         ADMIN_TOGGLE_SELECTION,
         ADMIN_WIPE,
+        ADMIN_CHARACTER_WIPE,
         // Навыки: amount — номер навыка (SkillDef.ordinal). ГМ прибавляет или отнимает уровень либо 10 % уровня
         // поверх наработанного, как /rpcore skill … add; навык дальше растёт и падает сам
         ADMIN_SKILL_UP,

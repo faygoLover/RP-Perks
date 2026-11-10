@@ -147,6 +147,20 @@ public class PlayerPerks {
         cachedStats = null;
     }
 
+    /** Вайп персонажа: всё, что нажито; запреты ГМа остаются. */
+    public void wipe() {
+        reset();
+        refuseTokens = 0;
+        resetTokens = 0;
+        skillLevels.clear();
+        trained.clear();
+        skillXp.clear();
+        physiqueApplied.clear();
+        skillGrants.clear();
+        decayMinutes.clear();
+        skillGrantsOutdated = false;
+    }
+
     // ---------- Ограничения выбора (ставит админ) ----------
     public Set<Perk> getBlockedPerks() { return Collections.unmodifiableSet(blockedPerks); }
     public boolean isBlocked(Perk perk) { return blockedPerks.contains(perk); }

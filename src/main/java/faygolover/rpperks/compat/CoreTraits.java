@@ -77,6 +77,8 @@ public final class CoreTraits implements TraitProvider {
         m.put(HACKER, Set.of(Perk.HACKER));
         m.put(TECHNOPHOBE, Set.of(Perk.TECHNOPHOBE));
         m.put(RpIds.MELEE_FIGHTER, Set.of(Perk.MELEE_FIGHTER));
+        m.put(RpIds.SOLDIER, Set.of(Perk.SOLDIER));
+        m.put(RpIds.PACIFIST, Set.of(Perk.PACIFIST));
         // Питание (RP Culinary)
         m.put(RpIds.ANOREXIC, Set.of(Perk.ANOREXIC));
         m.put(RpIds.DIETITIAN, Set.of(Perk.DIETITIAN));

@@ -124,6 +124,10 @@ public final class PerkActions {
                 data.reset();
                 log = "очистил карточку";
             }
+            case ADMIN_CHARACTER_WIPE -> {
+                faygolover.rpcore.api.RpCoreAPI.wipeCharacter(target.server, target.getUUID(), target.getScoreboardName(), admin.getScoreboardName());
+                log = "обнулил персонажа целиком";
+            }
             case ADMIN_SKILL_UP, ADMIN_SKILL_DOWN, ADMIN_SKILL_UP_TENTH, ADMIN_SKILL_DOWN_TENTH -> {
                 if (msg.amount < 0 || msg.amount >= SkillDef.VALUES.length) return;
                 SkillDef skill = SkillDef.VALUES[msg.amount];

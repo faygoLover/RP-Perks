@@ -356,5 +356,7 @@
   "gui.rpperks.reason.no_points_reset": "После сброса баланс уйдёт в минус на %s — нужен ГМ",
   "commands.rpperks.help.audit": "Особенности, которым сейчас не хватает мода с механикой",
   "commands.rpperks.audit.ok": "§aУ всех доступных особенностей есть механика или они нарочно только РП.",
-  "commands.rpperks.audit.empty": "§eБез механики (нужен мод): §f%s"
+  "commands.rpperks.audit.empty": "§eБез механики (нужен мод): §f%s",
+  "gui.rpperks.button.character_wipe": "Вайп персонажа",
+  "gui.rpperks.button.character_wipe_sure": "Точно стереть всё?"
 }

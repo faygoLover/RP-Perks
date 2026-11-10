@@ -102,6 +102,7 @@ public class PerkScreen extends Screen {
     @Nullable private Button blockButton;
     @Nullable private Button resetButton;
     @Nullable private Button wipeButton;
+    @Nullable private Button characterWipeButton;
     @Nullable private Button selectionButton;
 
     /** Двойное нажатие для необратимых действий: ключ ожидающего подтверждения и срок. */
@@ -206,7 +207,7 @@ public class PerkScreen extends Screen {
         left = (width - panelW) / 2;
         top = (height - panelHeight) / 2;
 
-        int bottomBar = adminMode ? 44 : builtProfileOnly ? 0 : 24;
+        int bottomBar = adminMode ? 64 : builtProfileOnly ? 0 : 24;
         bottomY = top + panelHeight - (bottomBar == 0 ? PAD : bottomBar);
         listX = left + PAD;
         listY = top + (builtProfileOnly ? 20 : 36);
@@ -279,6 +280,7 @@ public class PerkScreen extends Screen {
 
         resetButton = null;
         wipeButton = null;
+        characterWipeButton = null;
         selectionButton = null;
         tasteButton = null;
         int by = bottomY + 4;
@@ -310,6 +312,8 @@ public class PerkScreen extends Screen {
             selectionButton = addRenderableWidget(Button.builder(Component.empty(),
                             b -> admin(Action.ADMIN_TOGGLE_SELECTION, null, 0))
                     .bounds(left + panelW - PAD - 120, by2, 120, BTN).build());
+            characterWipeButton = addRenderableWidget(Button.builder(Component.empty(), b -> onCharacterWipe())
+                    .bounds(left + panelW - PAD - 120, by2 + 20, 120, BTN).build());
         }
         updateButtons();
     }
@@ -494,6 +498,11 @@ public class PerkScreen extends Screen {
                     ? Component.translatable("gui.rpperks.button.confirm")
                     : Component.translatable("gui.rpperks.button.wipe"));
         }
+        if (characterWipeButton != null) {
+            characterWipeButton.active = data != null;
+            characterWipeButton.setMessage(Component.translatable(isPending("character_wipe2") ? "gui.rpperks.button.character_wipe_sure"
+                    : isPending("character_wipe") ? "gui.rpperks.button.confirm" : "gui.rpperks.button.character_wipe"));
+        }
     }
 
     // =====================================================================
@@ -552,6 +561,16 @@ public class PerkScreen extends Screen {
     private void onWipe() {
         if (!confirm("wipe")) return;
         admin(Action.ADMIN_WIPE, null, 0);
+    }
+
+    /** Вайп персонажа — двойное подтверждение: три нажатия подряд. */
+    private void onCharacterWipe() {
+        if (isPending("character_wipe2")) {
+            pendingKey = null;
+            admin(Action.ADMIN_CHARACTER_WIPE, null, 0);
+            return;
+        }
+        if (confirm("character_wipe")) confirm("character_wipe2");
     }
 
     private void admin(Action action, @Nullable Perk perk, int amount) {
