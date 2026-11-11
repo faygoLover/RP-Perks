@@ -44,7 +44,7 @@ public final class PerkConsumers {
         put(List.of(CUL), Perk.CLEAN, Perk.LIGHT_EATER, Perk.BIG_EATER, Perk.LOW_THIRST, Perk.HIGH_THIRST, Perk.FAST_METABOLISM,
                 Perk.SLOW_METABOLISM, Perk.GOURMET, Perk.CANNIBAL, Perk.SEAFOOD_ALLERGY, Perk.EMACIATED, Perk.OVERWEIGHT,
                 Perk.OBESE, Perk.COOK, Perk.DIETITIAN, Perk.FIELD_COOK, Perk.VINTNER, Perk.PRESERVER, Perk.KITCHEN_NIGHTMARE);
-        put(List.of(MED), Perk.MEDIC, Perk.FIRST_AID, Perk.AMPUTEE, Perk.DIABETIC, Perk.HEMOPHOBIC, Perk.ALCOHOL_ADDICT,
+        put(List.of(MED), Perk.MEDIC, Perk.FIRST_AID, Perk.AMPUTEE, Perk.SCARRED, Perk.DIABETIC, Perk.HEMOPHOBIC, Perk.ALCOHOL_ADDICT,
                 Perk.ALCOHOLIC, Perk.SMOKER, Perk.TEETOTALER);
         put(List.of(MED), Perk.QUICK_WORKER, Perk.SLOW_WORKER);
         put(List.of(PSY, MED), Perk.BRAVE, Perk.COWARD);

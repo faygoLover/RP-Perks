@@ -100,6 +100,8 @@ public enum Perk {
     DELICATE("delicate", Category.NEGATIVE, 4, "Нежный"),
     FRAGILE("fragile", Category.NEGATIVE, 3, "Хрупкий"),
     AMPUTEE("amputee", Category.NEGATIVE, 8, "Ампутант", "rpmedicine"),
+    /** П11 (Medicine 0.12.0): следы старых травм на каждой части тела с начала. Только механика здоровья. */
+    SCARRED("scarred", Category.NEGATIVE, 2, "Лицо со шрамом", "rpmedicine"),
     DIABETIC("diabetic", Category.NEGATIVE, 5, "Диабетик"),
     // Еда и вода
     WEAK_STOMACH("weak_stomach", Category.NEGATIVE, 3, "Слабый желудок"),

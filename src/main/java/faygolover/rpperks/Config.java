@@ -488,6 +488,8 @@ public final class Config {
         FRAGILE_KNOCKBACK_PERCENT = B.comment(" Насколько сильнее отбрасывает, %").defineInRange("knockback_percent", 20.0, 0.0, 500.0);
         B.pop();
         rpPerk(Perk.AMPUTEE, "Ампутант: старт без руки или ноги (механика — RP Medicine)");
+        rpPerk(Perk.SCARRED, "Лицо со шрамом: с начала следы старых травм на каждой части тела — запас частей меньше,",
+                "первая серьёзная травма уже даёт о себе знать (механика и число — RP Medicine, scars.scarred_start_trauma)");
         rpPerk(Perk.DIABETIC, "Требуется ежедневная доза инсулина (с RP Medicine — настоящий сахар в крови, иначе РП).",
                 "Скрыт по умолчанию (hidden_perks), пока сахар не переведён на RP-сутки");
 

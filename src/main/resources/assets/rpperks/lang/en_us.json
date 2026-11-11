@@ -246,6 +246,8 @@
   "perk.rpperks.delicate.desc": "Healing −20%, blood loss +20%, pain +20%.",
   "perk.rpperks.amputee.name": "§cAmputee",
   "perk.rpperks.amputee.desc": "Starts without an arm or a leg, prosthesis optional.",
+  "perk.rpperks.scarred.name": "§cScarface",
+  "perk.rpperks.scarred.desc": "Life has already roughed you up: old injuries all over the body. Every body part has less reserve, and the first serious injury makes itself felt at once.",
   "perk.rpperks.weak_stomach.name": "§cWeak Stomach",
   "perk.rpperks.weak_stomach.desc": "Gets food poisoning more often, overeating hits sooner.",
   "perk.rpperks.big_eater.name": "§cBig Eater",

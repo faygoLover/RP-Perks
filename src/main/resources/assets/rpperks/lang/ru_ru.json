@@ -246,6 +246,8 @@
   "perk.rpperks.delicate.desc": "Заживление −20 %, кровопотеря +20 %, боль +20 %.",
   "perk.rpperks.amputee.name": "§cАмпутант",
   "perk.rpperks.amputee.desc": "Старт без руки или ноги, протез — по желанию.",
+  "perk.rpperks.scarred.name": "§cЛицо со шрамом",
+  "perk.rpperks.scarred.desc": "Жизнь уже потрепала: старые травмы на всём теле. Запас каждой части меньше, первая серьёзная травма сразу даёт о себе знать.",
   "perk.rpperks.weak_stomach.name": "§cСлабый желудок",
   "perk.rpperks.weak_stomach.desc": "Травится чаще, переедание наступает раньше.",
   "perk.rpperks.big_eater.name": "§cОбжора",

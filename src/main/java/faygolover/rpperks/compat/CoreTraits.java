@@ -26,6 +26,8 @@ public final class CoreTraits implements TraitProvider {
     public static final ResourceLocation LUCKY = new ResourceLocation("rpcore", "lucky");
     public static final ResourceLocation HACKER = new ResourceLocation("rpcore", "hacker");
     public static final ResourceLocation TECHNOPHOBE = new ResourceLocation("rpcore", "technophobe");
+    /** «Лицо со шрамом» (П11): своя константа, Core для неё не пересобирается; Medicine читает ту же. */
+    public static final ResourceLocation SCARRED = new ResourceLocation("rpcore", "scarred");
 
     /** Черта RP Core → особенности, которые её дают. */
     @SuppressWarnings("deprecation")
@@ -56,6 +58,7 @@ public final class CoreTraits implements TraitProvider {
         m.put(RpIds.TEETOTALER, Set.of(Perk.TEETOTALER));
         m.put(RpIds.CAFFEINE_ADDICT, Set.of(Perk.CAFFEINE_ADDICTION));
         m.put(RpIds.AMPUTEE, Set.of(Perk.AMPUTEE));
+        m.put(SCARRED, Set.of(Perk.SCARRED));
         m.put(RpIds.HEMOPHOBIC, Set.of(Perk.HEMOPHOBIC));
         m.put(RpIds.SUN_SENSITIVE, Set.of(Perk.SUN_SENSITIVE));
         m.put(RpIds.ILLITERATE, Set.of(Perk.ILLITERATE));
