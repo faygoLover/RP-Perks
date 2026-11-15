@@ -1,6 +1,6 @@
 # RP Perks — указатель кода
 
-Создано `python _family/tools/mapgen.py` 15.11.2026, версия 2.11.0-1.20.1-forge, коммит `dea9c36`.
+Создано `python _family/tools/mapgen.py` 15.11.2026, версия 2.11.0-1.20.1-forge, коммит `b3b9c11`.
 **Руками не править**: пересоздаётся скриптом. Смысл, потоки работы и рецепты — в `docs/MAP.md`.
 Разбор по шаблонам, без компиляции: необычно оформленная регистрация может отсутствовать в списках.
 
@@ -128,7 +128,7 @@
 
 ## 6. Данные
 
-- capability: `PlayerPerksProvider`
+- capability: `PlayerPerksProvider`, ключ `rpperks:player_perks`
 
 ## 7. Конфиги
 
