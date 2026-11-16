@@ -1,37 +1,37 @@
 # RP Perks — указатель кода
 
-Создано `python _family/tools/mapgen.py`, версия мода 2.11.0-1.20.1-forge.
+Создано `python _family/tools/mapgen.py`, версия мода 2.11.1-1.20.1-forge.
 **Руками не править**: пересоздаётся скриптом. Смысл, потоки работы и рецепты — в `docs/MAP.md`.
 Разбор по шаблонам, без компиляции: необычно оформленная регистрация может отсутствовать в списках.
 
-Всего: 31 файлов, 6409 строк Java.
+Всего: 31 файлов, 6375 строк Java.
 
 ## 1. Пакеты
 
 | Пакет | Файлов | Строк |
 |---|---:|---:|
-| `faygolover.rpperks` | 2 | 1041 |
-| `faygolover.rpperks.capability` | 2 | 511 |
+| `faygolover.rpperks` | 2 | 1035 |
+| `faygolover.rpperks.capability` | 2 | 498 |
 | `faygolover.rpperks.client` | 2 | 80 |
 | `faygolover.rpperks.client.screen` | 1 | 1076 |
 | `faygolover.rpperks.commands` | 1 | 83 |
 | `faygolover.rpperks.compat` | 2 | 245 |
 | `faygolover.rpperks.compat.tacz` | 1 | 117 |
-| `faygolover.rpperks.events` | 3 | 1034 |
+| `faygolover.rpperks.events` | 3 | 1023 |
 | `faygolover.rpperks.gametest` | 4 | 507 |
 | `faygolover.rpperks.network` | 5 | 399 |
 | `faygolover.rpperks.perk` | 4 | 539 |
-| `faygolover.rpperks.skill` | 4 | 777 |
+| `faygolover.rpperks.skill` | 4 | 773 |
 
 ## 2. Классы
 
 ### `faygolover.rpperks`
 - `Config`, 992 — Серверный конфиг мода: world/serverconfig/rpperks-server.toml (для новых миров можно положить готовый файл в defaultconfigs/).
-- `Rpperks`, 49 — *без описания*
+- `Rpperks`, 43 — *без описания*
 
 ### `faygolover.rpperks.capability`
 - `PlayerPerks`, 455 — Данные перков игрока.
-- `PlayerPerksProvider`, 56 — Привязка PlayerPerks к игроку.
+- `PlayerPerksProvider`, 43 — Данные PlayerPerks у игрока: capability и описание для RP Core.
 
 ### `faygolover.rpperks.client`
 - `ClientPacketHandler`, 46 — Обработка пакетов на клиенте.
@@ -52,7 +52,7 @@
 
 ### `faygolover.rpperks.events`
 - `PerkActions`, 167 — Серверная обработка кнопок окна перков.
-- `PerkEventHandler`, 305 — Жизненный цикл игрока, пересчёт характеристик, синхронизация и наблюдение админа.
+- `PerkEventHandler`, 294 — Жизненный цикл игрока, пересчёт характеристик, синхронизация и наблюдение админа.
 - `PerkMechanicsHandler`, 562 — Игровые механики перков: тики, еда, бой, неприятности.
 
 ### `faygolover.rpperks.gametest`
@@ -78,7 +78,7 @@
 - `PhysicalEffects`, 91 — Баффы Силы и Телосложения по уровню (RP Stamina Sports docs/04 п.
 - `SkillDef` (enum), 62 — Навыки семейства RP, которые ведёт RP Perks (уровни 0–10).
 - `SkillEvents`, 89 — События навыков (сервер): ближний бой — любое оружие и голые руки (урон и скорость ударов от уровня, урон от Силы, Силача и Слабака, опыт за удар), Пацифист — урон по людям, раз в минуту — потеря Силы и Телосложения от плохого пит…
-- `SkillService`, 535 — Навыки 0–10.
+- `SkillService`, 531 — Навыки 0–10.
 
 Классов без описания: 2 из 31.
 
@@ -86,7 +86,6 @@
 
 | Событие | Кто слушает |
 |---|---|
-| `AttachCapabilitiesEvent` | `PlayerPerksProvider.onAttachCapabilities` |
 | `BlockEvent.BreakEvent` | `PerkMechanicsHandler.onBlockBreak` |
 | `ClientPlayerNetworkEvent.LoggingOut` | `ClientPerkData.onLoggingOut` |
 | `EntityHurtByGunEvent.Post` | `WeaponSkills.onHit` |
@@ -99,14 +98,9 @@
 | `LivingKnockBackEvent` | `PerkMechanicsHandler.onKnockback` |
 | `ModConfigEvent.Loading` | `Config.onLoad` |
 | `ModConfigEvent.Reloading` | `Config.onReload` |
-| `PlayerEvent.Clone` | `PerkEventHandler.onPlayerClone` |
-| `PlayerEvent.PlayerChangedDimensionEvent` | `PerkEventHandler.onChangedDimension` |
-| `PlayerEvent.PlayerLoggedInEvent` | `PerkEventHandler.onPlayerLogin` |
-| `PlayerEvent.PlayerLoggedOutEvent` | `PerkEventHandler.onPlayerLogout`, `SkillEvents.onLogout` |
-| `PlayerEvent.PlayerRespawnEvent` | `PerkEventHandler.onPlayerRespawn` |
+| `PlayerEvent.PlayerLoggedOutEvent` | `SkillEvents.onLogout` |
 | `PlayerInteractEvent.RightClickItem` | `PerkMechanicsHandler.onClumsyUse`, `PerkMechanicsHandler.onRightClickFood` |
 | `PlayerWakeUpEvent` | `PerkMechanicsHandler.onPlayerWakeUp` |
-| `RegisterCapabilitiesEvent` | `Rpperks.registerCapabilities` |
 | `RegisterCommandsEvent` | `PerkCommands.onRegisterCommands` |
 | `TickEvent.PlayerTickEvent` | `PerkMechanicsHandler.onPlayerTick`, `SkillEvents.onPlayerTick`, `WeaponSkills.onTick` |
 | `faygolover.rpcore.api.event.RpCharacterWipeEvent` | `PerkEventHandler.onCharacterWipe` |
@@ -138,7 +132,7 @@
 
 ## 8. Что берёт из RP Core и что ему даёт
 
-Методы `RpCoreAPI` (сколько вызовов): `body` 5, `bodyFatPercent` 1, `bodyHandles` 6, `bodyScale` 1, `bodyState` 1, `inventoryChanged` 1, `learningFactor` 1, `nutrition` 3, `nutritionHandles` 2, `profile` 3, `registerCommand` 3, `registerInventoryModifier` 1, `registerModule` 1, `registerProvider` 1, `setProfile` 1, `staminaAttribute` 1, `submitProfile` 1, `submitTaste` 2, `taste` 1, `timeRunning` 1, `weightKg` 3, `wipeCharacter` 1.
+Методы `RpCoreAPI` (сколько вызовов): `body` 5, `bodyFatPercent` 1, `bodyHandles` 6, `bodyRate` 1, `bodyState` 1, `inventoryChanged` 1, `learningFactor` 1, `nutrition` 3, `nutritionHandles` 2, `profile` 3, `registerCommand` 3, `registerInventoryModifier` 1, `registerModule` 1, `registerProvider` 1, `setProfile` 1, `staminaAttribute` 1, `submitProfile` 1, `submitTaste` 2, `taste` 1, `timeRunning` 1, `weightKg` 3, `wipeCharacter` 1.
 
 Реализует розетки: InventoryModifier ← `CoreInventory`; TraitProvider ← `CoreTraits`.
 
@@ -148,7 +142,7 @@
 
 Проверки `isLoaded`: `rpsports` (SkillService); `tacz` (Rpperks).
 
-Пакеты других модов семейства в коде: `rpcore` — 15 файлов.
+Пакеты других модов семейства в коде: `rpcore` — 16 файлов.
 
 ## 10. Зарегистрированные id
 

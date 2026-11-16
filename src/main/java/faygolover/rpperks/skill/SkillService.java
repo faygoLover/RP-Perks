@@ -319,13 +319,9 @@ public final class SkillService {
         for (int i = 0; i < steps; i++) bodyMinuteTick(p, d);
     }
 
-    /** Одна реальная минута в минутах времени тела. Без Core 0.13.0 — как раньше: 1, без паузы. */
+    /** Одна реальная минута в минутах времени тела (числа подобраны под эталон RP Core — 3-часовые сутки). */
     private static double bodyMinute() {
-        try {
-            return RpCoreAPI.bodyScale() / 8.0;
-        } catch (NoSuchMethodError old) {
-            return 1;
-        }
+        return RpCoreAPI.bodyRate();
     }
 
     /** Минута времени тела: плохое питание и болезнь отнимают Силу и Телосложение, вес вне нормы — тянет к потолку. */

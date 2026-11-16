@@ -19,7 +19,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
@@ -56,18 +55,23 @@ public final class PerkEventHandler {
     // Жизненный цикл
     // =====================================================================
 
-    @SubscribeEvent
-    public static void onPlayerClone(PlayerEvent.Clone event) {
-        Player oldPlayer = event.getOriginal();
-        oldPlayer.reviveCaps();
-        oldPlayer.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(oldData ->
-                event.getEntity().getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(newData -> newData.copyFrom(oldData)));
-        oldPlayer.invalidateCaps();
+    /**
+     * Вход, возрождение, смена измерения (зовёт RP Core через {@code PlayerPerksProvider.STORE}).
+     * Копию карточки при возрождении делает RP Core по правилу из {@code PlayerPerksProvider.register()}.
+     */
+    public static void resync(ServerPlayer player, faygolover.rpcore.api.data.PlayerStore.Sync why) {
+        switch (why) {
+            case LOGIN -> onLogin(player);
+            case RESPAWN -> refresh(player);
+            // При смене измерения клиент пересоздаёт игрока, и его capability пустеет — отправляем данные заново.
+            case DIMENSION -> {
+                player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> syncToClient(player, data));
+                faygolover.rpperks.skill.SkillService.sync(player);
+            }
+        }
     }
 
-    @SubscribeEvent
-    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+    private static void onLogin(ServerPlayer player) {
         // 2.7.0: старый уровень ГМа замораживал навык — перевести в наработанный до первой синхронизации.
         player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> {
             int n = faygolover.rpperks.skill.SkillService.migrateGmLevels(data);
@@ -84,23 +88,8 @@ public final class PerkEventHandler {
         });
     }
 
-    @SubscribeEvent
-    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) refresh(player);
-    }
-
-    /** При смене измерения клиент пересоздаёт игрока, и его capability пустеет — отправляем данные заново. */
-    @SubscribeEvent
-    public static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            player.getCapability(PlayerPerksProvider.PLAYER_PERKS).ifPresent(data -> syncToClient(player, data));
-            faygolover.rpperks.skill.SkillService.sync(player);
-        }
-    }
-
-    @SubscribeEvent
-    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+    /** Игрок вышел (зовёт RP Core): закрыть его окна перков у админов. */
+    public static void forget(ServerPlayer player) {
         UUID id = player.getUUID();
         ADMIN_SCREENS.remove(id);
         ADMIN_SCREENS.values().removeIf(id::equals);
