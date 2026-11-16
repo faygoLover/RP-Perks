@@ -125,8 +125,8 @@ public final class CoreTraits implements TraitProvider {
     }
 
     /**
-     * Выдать служебный перк-знание по черте (книга «Записи исследований» RP Culinary зовёт отражением, без
-     * зависимости). 1 — выдан, 0 — уже есть, −1 — нет такого знания или данных игрока.
+     * Выдать служебный перк-знание по черте (книга «Записи исследований» RP Culinary зовёт через RP Core —
+     * {@link #teach}). 1 — выдан, 0 — уже есть, −1 — нет такого знания или данных игрока.
      */
     public static int grantKnowledge(ServerPlayer player, ResourceLocation trait) {
         Set<Perk> perks = TRAITS.get(trait);
@@ -141,6 +141,12 @@ public final class CoreTraits implements TraitProvider {
             return 1;
         }
         return -1;
+    }
+
+    /** Розетка RP Core ({@code RpCoreAPI.grantKnowledge}): то же, что {@link #grantKnowledge}. */
+    @Override
+    public int teach(ServerPlayer player, ResourceLocation trait) {
+        return grantKnowledge(player, trait);
     }
 
     private static PlayerPerks data(Player p) {

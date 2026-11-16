@@ -1,10 +1,10 @@
 # RP Perks — указатель кода
 
-Создано `python _family/tools/mapgen.py`, версия мода 2.11.1-1.20.1-forge.
+Создано `python _family/tools/mapgen.py`, версия мода 2.11.2-1.20.1-forge.
 **Руками не править**: пересоздаётся скриптом. Смысл, потоки работы и рецепты — в `docs/MAP.md`.
 Разбор по шаблонам, без компиляции: необычно оформленная регистрация может отсутствовать в списках.
 
-Всего: 31 файлов, 6375 строк Java.
+Всего: 31 файлов, 6381 строк Java.
 
 ## 1. Пакеты
 
@@ -15,7 +15,7 @@
 | `faygolover.rpperks.client` | 2 | 80 |
 | `faygolover.rpperks.client.screen` | 1 | 1076 |
 | `faygolover.rpperks.commands` | 1 | 83 |
-| `faygolover.rpperks.compat` | 2 | 245 |
+| `faygolover.rpperks.compat` | 2 | 251 |
 | `faygolover.rpperks.compat.tacz` | 1 | 117 |
 | `faygolover.rpperks.events` | 3 | 1023 |
 | `faygolover.rpperks.gametest` | 4 | 507 |
@@ -45,7 +45,7 @@
 
 ### `faygolover.rpperks.compat`
 - `CoreInventory`, 31 — Особенности → инвентарь (RP Inventory через Core).
-- `CoreTraits`, 214 — RP Perks для RP Core: навыки семейства и черты по особенностям.
+- `CoreTraits`, 220 — RP Perks для RP Core: навыки семейства и черты по особенностям.
 
 ### `faygolover.rpperks.compat.tacz`
 - `WeaponSkills`, 117 — Оружейные навыки для TaCZ (грузится, только если TaCZ установлен).
@@ -132,7 +132,7 @@
 
 ## 8. Что берёт из RP Core и что ему даёт
 
-Методы `RpCoreAPI` (сколько вызовов): `body` 5, `bodyFatPercent` 1, `bodyHandles` 6, `bodyRate` 1, `bodyState` 1, `inventoryChanged` 1, `learningFactor` 1, `nutrition` 3, `nutritionHandles` 2, `profile` 3, `registerCommand` 3, `registerInventoryModifier` 1, `registerModule` 1, `registerProvider` 1, `setProfile` 1, `staminaAttribute` 1, `submitProfile` 1, `submitTaste` 2, `taste` 1, `timeRunning` 1, `weightKg` 3, `wipeCharacter` 1.
+Методы `RpCoreAPI` (сколько вызовов): `body` 5, `bodyFatPercent` 1, `bodyHandles` 6, `bodyRate` 1, `bodyState` 1, `grantKnowledge` 1, `inventoryChanged` 1, `learningFactor` 1, `nutrition` 3, `nutritionHandles` 2, `profile` 3, `registerCommand` 3, `registerInventoryModifier` 1, `registerModule` 1, `registerProvider` 1, `setProfile` 1, `staminaAttribute` 1, `submitProfile` 1, `submitTaste` 2, `taste` 1, `timeRunning` 1, `weightKg` 3, `wipeCharacter` 1.
 
 Реализует розетки: InventoryModifier ← `CoreInventory`; TraitProvider ← `CoreTraits`.
 
