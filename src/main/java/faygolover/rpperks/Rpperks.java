@@ -33,6 +33,8 @@ public class Rpperks {
             faygolover.rpcore.api.RpCoreAPI.registerInventoryModifier(
                     new net.minecraft.resources.ResourceLocation(MODID, "perks"), new faygolover.rpperks.compat.CoreInventory());
             faygolover.rpcore.api.RpCoreAPI.registerModule(MODID, "перки, навыки (оружие, ближний бой, Медицина, Сила, Телосложение…) и черты");
+            // Необязательные интеграции — в общий отчёт RP Core (/rpcore compat).
+            faygolover.rpcore.api.RpCoreAPI.reportCompat(MODID, "tacz");
             faygolover.rpperks.commands.PerkCommands.describe();
             // Оружейные навыки — только если стоит TaCZ (класс с его API грузится лишь тогда).
             if (net.minecraftforge.fml.ModList.get().isLoaded("tacz")) faygolover.rpperks.compat.tacz.WeaponSkills.register();

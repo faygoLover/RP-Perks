@@ -4,13 +4,13 @@
 **Руками не править**: пересоздаётся скриптом. Смысл, потоки работы и рецепты — в `docs/MAP.md`.
 Разбор по шаблонам, без компиляции: необычно оформленная регистрация может отсутствовать в списках.
 
-Всего: 31 файлов, 6381 строк Java.
+Всего: 31 файлов, 6383 строк Java.
 
 ## 1. Пакеты
 
 | Пакет | Файлов | Строк |
 |---|---:|---:|
-| `faygolover.rpperks` | 2 | 1035 |
+| `faygolover.rpperks` | 2 | 1037 |
 | `faygolover.rpperks.capability` | 2 | 498 |
 | `faygolover.rpperks.client` | 2 | 80 |
 | `faygolover.rpperks.client.screen` | 1 | 1076 |
@@ -27,7 +27,7 @@
 
 ### `faygolover.rpperks`
 - `Config`, 992 — Серверный конфиг мода: world/serverconfig/rpperks-server.toml (для новых миров можно положить готовый файл в defaultconfigs/).
-- `Rpperks`, 43 — *без описания*
+- `Rpperks`, 45 — *без описания*
 
 ### `faygolover.rpperks.capability`
 - `PlayerPerks`, 455 — Данные перков игрока.
@@ -132,7 +132,7 @@
 
 ## 8. Что берёт из RP Core и что ему даёт
 
-Методы `RpCoreAPI` (сколько вызовов): `body` 5, `bodyFatPercent` 1, `bodyHandles` 6, `bodyRate` 1, `bodyState` 1, `grantKnowledge` 1, `inventoryChanged` 1, `learningFactor` 1, `nutrition` 3, `nutritionHandles` 2, `profile` 3, `registerCommand` 3, `registerInventoryModifier` 1, `registerModule` 1, `registerProvider` 1, `setProfile` 1, `staminaAttribute` 1, `submitProfile` 1, `submitTaste` 2, `taste` 1, `timeRunning` 1, `weightKg` 3, `wipeCharacter` 1.
+Методы `RpCoreAPI` (сколько вызовов): `body` 5, `bodyFatPercent` 1, `bodyHandles` 6, `bodyRate` 1, `bodyState` 1, `grantKnowledge` 1, `inventoryChanged` 1, `learningFactor` 1, `nutrition` 3, `nutritionHandles` 2, `profile` 3, `registerCommand` 3, `registerInventoryModifier` 1, `registerModule` 1, `registerProvider` 1, `reportCompat` 1, `setProfile` 1, `staminaAttribute` 1, `submitProfile` 1, `submitTaste` 2, `taste` 1, `timeRunning` 1, `weightKg` 3, `wipeCharacter` 1.
 
 Реализует розетки: InventoryModifier ← `CoreInventory`; TraitProvider ← `CoreTraits`.
 
